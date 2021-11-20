@@ -69,6 +69,8 @@ func runCollectStats() {
 func sendStats() {
 	myStatData.mu.Lock()
 	PollCount := makeStatStringCounter("PollCount", myStatData.PollCount)
+	myStatData.PollCount = 0
+
 	RandomValue := makeStatStringCounter("RandomValue", int64(myStatData.RandomValue))
 	Alloc := makeStatStringGauge("Alloc", float64(myStatData.memStats.Alloc))
 	BuckHashSys := makeStatStringGauge("BuckHashSys", float64(myStatData.memStats.BuckHashSys))
