@@ -30,10 +30,11 @@ const (
 )
 
 func sendStat(statString string) {
-	_, err := http.Post(defaultServer+statString, contentType, nil)
+	resp, err := http.Post(defaultServer+statString, contentType, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer resp.Body.Close()
 }
 
 func makeStatStringGauge(name string, value float64) string {
@@ -60,10 +61,8 @@ func collectStats() {
 func runCollectStats() {
 	ticker := time.NewTicker(pollInterval)
 	for {
-		select {
-		case <-ticker.C:
-			collectStats()
-		}
+		<-ticker.C
+		collectStats()
 	}
 }
 
@@ -132,10 +131,8 @@ func sendStats() {
 func runSendStats() {
 	ticker := time.NewTicker(reportInterval)
 	for {
-		select {
-		case <-ticker.C:
-			sendStats()
-		}
+		<-ticker.C
+		sendStats()
 	}
 }
 
