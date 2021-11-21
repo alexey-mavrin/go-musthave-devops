@@ -35,12 +35,12 @@ func TestHandler(t *testing.T) {
 		{
 			name: "counter no name 1",
 			args: "/update/counter/",
-			want: want{code: 400},
+			want: want{code: 404},
 		},
 		{
 			name: "counter no name 2",
 			args: "/update/counter//100",
-			want: want{code: 400},
+			want: want{code: 404},
 		},
 		{
 			name: "counter bad op",
@@ -50,7 +50,7 @@ func TestHandler(t *testing.T) {
 		{
 			name: "bad type",
 			args: "/update/integer/x/1",
-			want: want{code: 404},
+			want: want{code: 501},
 		},
 		{
 			name: "counter bad counter val 1",

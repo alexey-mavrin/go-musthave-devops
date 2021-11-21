@@ -15,11 +15,10 @@ const (
 )
 
 var (
-	errNotEngoughParts = fmt.Errorf("too few parts in URL")
-	errWrongOp         = fmt.Errorf("unknown operation")
-	errWrongType       = fmt.Errorf("unknown type")
-	errBadName         = fmt.Errorf("bad stat name")
-	errBadValue        = fmt.Errorf("bad value")
+	errWrongOp   = fmt.Errorf("unknown operation")
+	errWrongType = fmt.Errorf("unknown type")
+	errNoName    = fmt.Errorf("no stat name")
+	errBadValue  = fmt.Errorf("bad value")
 )
 
 type statReq struct {
@@ -33,14 +32,20 @@ func parseURL(url string) (statReq, error) {
 	var stat statReq
 	parts := strings.Split(url, "/")
 
-	if len(parts) != 5 {
-		return stat, errNotEngoughParts
-	}
+	var op, typ, name, rawVal string
 
-	op := parts[1]
-	typ := parts[2]
-	name := parts[3]
-	rawVal := parts[4]
+	if len(parts) > 1 {
+		op = parts[1]
+	}
+	if len(parts) > 2 {
+		typ = parts[2]
+	}
+	if len(parts) > 3 {
+		name = parts[3]
+	}
+	if len(parts) > 4 {
+		rawVal = parts[4]
+	}
 
 	if op != "update" {
 		return stat, errWrongOp
@@ -51,7 +56,7 @@ func parseURL(url string) (statReq, error) {
 	}
 
 	if len(name) == 0 {
-		return stat, errBadName
+		return stat, errNoName
 	}
 
 	if len(rawVal) == 0 {
@@ -83,23 +88,18 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	url := string(r.URL.Path)
 	_, err := parseURL(url)
 
-	if err == errNotEngoughParts {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
 	if err == errWrongOp {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	if err == errWrongType {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusNotImplemented)
 		return
 	}
 
-	if err == errBadName {
-		w.WriteHeader(http.StatusBadRequest)
+	if err == errNoName {
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
