@@ -15,11 +15,11 @@ const (
 )
 
 var (
-	errNotEngoughParts = fmt.Errorf("Too few parts in URL")
-	errWrongOp         = fmt.Errorf("Unknown Operation")
-	errWrongType       = fmt.Errorf("Unknown Type")
-	errBadName         = fmt.Errorf("Bad Stat Name")
-	errBadValue        = fmt.Errorf("Bad Value")
+	errNotEngoughParts = fmt.Errorf("too few parts in URL")
+	errWrongOp         = fmt.Errorf("unknown operation")
+	errWrongType       = fmt.Errorf("unknown type")
+	errBadName         = fmt.Errorf("bad stat name")
+	errBadValue        = fmt.Errorf("bad value")
 )
 
 type statReq struct {
