@@ -78,7 +78,7 @@ func parseReq(r *http.Request) (statReq, error) {
 // Handler400 — return 400
 func Handler400(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
-	w.Write([]byte(""))
+	w.Write([]byte("Bad Request"))
 }
 
 // MetricHandler prints all available metrics
@@ -94,19 +94,19 @@ func MetricHandler(w http.ResponseWriter, r *http.Request) {
 		val, ok := statistics.counters[name]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(""))
+			w.Write([]byte("Not Found"))
 		}
 		w.Write([]byte(fmt.Sprint(val)))
 	} else if typ == "gauge" {
 		val, ok := statistics.gauges[name]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(""))
+			w.Write([]byte("Not Found"))
 		}
 		w.Write([]byte(fmt.Sprint(val)))
 	} else {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(""))
+		w.Write([]byte("Bad Request"))
 	}
 }
 
@@ -131,25 +131,25 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err == errWrongOp {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(""))
+		w.Write([]byte("Not Found"))
 		return
 	}
 
 	if err == errWrongType {
 		w.WriteHeader(http.StatusNotImplemented)
-		w.Write([]byte(""))
+		w.Write([]byte("Not Implemented"))
 		return
 	}
 
 	if err == errNoName {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(""))
+		w.Write([]byte("Not Found"))
 		return
 	}
 
 	if err == errBadValue {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(""))
+		w.Write([]byte("Bad Request"))
 		return
 	}
 
