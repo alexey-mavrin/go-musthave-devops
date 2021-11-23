@@ -38,14 +38,9 @@ type statReq struct {
 
 func parseReq(r *http.Request) (statReq, error) {
 	var stat statReq
-	op := chi.URLParam(r, "op")
 	typ := chi.URLParam(r, "typ")
 	name := chi.URLParam(r, "name")
 	rawVal := chi.URLParam(r, "rawVal")
-
-	if op != "update" {
-		return stat, errWrongOp
-	}
 
 	if typ != "counter" && typ != "gauge" {
 		return stat, errWrongType
@@ -83,7 +78,6 @@ func parseReq(r *http.Request) (statReq, error) {
 // Handler400 — return 400
 func Handler400(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
-	w.Write([]byte("OK"))
 }
 
 // MetricHandler prints all available metrics
@@ -109,7 +103,6 @@ func MetricHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprint(val)))
 	} else {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("OK"))
 	}
 }
 
@@ -127,7 +120,7 @@ func DumpHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(str))
 }
 
-// UpdateHandler — обработчик запроса.
+// UpdateHandler — stores metrics in server
 func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(r.Method, r.URL)
 	stat, err := parseReq(r)
@@ -172,8 +165,8 @@ func Router() chi.Router {
 	r := chi.NewRouter()
 	r.Get("/", DumpHandler)
 	r.Get("/value/{typ}/{name}", MetricHandler)
-	r.Post("/{op}/{typ}/{name}/", Handler400)
-	r.Post("/{op}/{typ}/{name}/{rawVal}", UpdateHandler)
+	r.Post("/update/{typ}/{name}/", Handler400)
+	r.Post("/update/{typ}/{name}/{rawVal}", UpdateHandler)
 	return r
 }
 
