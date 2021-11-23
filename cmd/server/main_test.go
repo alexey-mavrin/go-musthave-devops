@@ -132,8 +132,9 @@ func TestRouter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			res, body := testRequest(t, ts, tt.method, tt.args)
-			assert.Equal(t, tt.want.code, res.StatusCode)
+			resp, body := testRequest(t, ts, tt.method, tt.args)
+			defer resp.Body.Close()
+			assert.Equal(t, tt.want.code, resp.StatusCode)
 			for _, s := range tt.want.body {
 				assert.Contains(t, body, s)
 			}
@@ -150,8 +151,6 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.
 
 	respBody, err := ioutil.ReadAll(resp.Body)
 	require.NoError(t, err)
-
-	defer resp.Body.Close()
 
 	return resp, string(respBody)
 }
