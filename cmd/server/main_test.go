@@ -62,6 +62,21 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
+			name:   "counter OK",
+			method: "POST",
+			args:   "/update/counter/RandomValue/1",
+			want:   want{code: 200},
+		},
+		{
+			name:   "Get counter",
+			method: "GET",
+			args:   "/value/counter/RandomValue",
+			want: want{
+				code: 200,
+				body: []string{"100501"},
+			},
+		},
+		{
 			name:   "Get gauge",
 			method: "GET",
 			args:   "/value/gauge/Alloc",

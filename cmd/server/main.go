@@ -154,7 +154,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	statistics.mu.Lock()
 	if stat.statType == statTypeCounter {
-		statistics.counters[stat.name] = stat.valueCounter
+		statistics.counters[stat.name] += stat.valueCounter
 	}
 	if stat.statType == statTypeGauge {
 		statistics.gauges[stat.name] = stat.valueGauge
