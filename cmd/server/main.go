@@ -22,6 +22,11 @@ const (
 	statTypeCounter
 )
 
+const (
+	strTypGauge   = "gauge"
+	strTypCounter = "counter"
+)
+
 var (
 	errWrongOp   = fmt.Errorf("unknown operation")
 	errWrongType = fmt.Errorf("unknown type")
@@ -42,7 +47,7 @@ func parseReq(r *http.Request) (statReq, error) {
 	name := chi.URLParam(r, "name")
 	rawVal := chi.URLParam(r, "rawVal")
 
-	if typ != "counter" && typ != "gauge" {
+	if typ != strTypCounter && typ != strTypGauge {
 		return stat, errWrongType
 	}
 
@@ -54,14 +59,14 @@ func parseReq(r *http.Request) (statReq, error) {
 		return stat, errBadValue
 	}
 
-	if typ == "counter" {
+	if typ == strTypCounter {
 		stat.statType = statTypeCounter
 		val, err := strconv.Atoi(rawVal)
 		if err != nil {
 			return stat, errBadValue
 		}
 		stat.valueCounter = int64(val)
-	} else if typ == "gauge" {
+	} else if typ == strTypGauge {
 		stat.statType = statTypeGauge
 		val, err := strconv.ParseFloat(rawVal, 64)
 		if err != nil {
@@ -90,14 +95,14 @@ func MetricHandler(w http.ResponseWriter, r *http.Request) {
 	statistics.mu.Lock()
 	defer statistics.mu.Unlock()
 
-	if typ == "counter" {
+	if typ == strTypCounter {
 		val, ok := statistics.counters[name]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte("Not Found"))
 		}
 		w.Write([]byte(fmt.Sprint(val)))
-	} else if typ == "gauge" {
+	} else if typ == strTypGauge {
 		val, ok := statistics.gauges[name]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
