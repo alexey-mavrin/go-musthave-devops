@@ -29,8 +29,21 @@ const (
 	reportInterval = 10 * time.Second
 )
 
+type agentConfig struct {
+	Server         string
+	PollInterval   time.Duration
+	ReportInterval time.Duration
+}
+
+// Config holds configuration parameters for the package
+var Config agentConfig = agentConfig{
+	Server:         defaultServer,
+	PollInterval:   pollInterval,
+	ReportInterval: reportInterval,
+}
+
 func sendStat(statString string) {
-	resp, err := http.Post(defaultServer+statString, contentType, nil)
+	resp, err := http.Post(Config.Server+statString, contentType, nil)
 	if err != nil {
 		log.Print(err)
 		return
@@ -63,7 +76,7 @@ func collectStats() {
 
 // RunCollectStats collects data periodically
 func RunCollectStats() {
-	ticker := time.NewTicker(pollInterval)
+	ticker := time.NewTicker(Config.PollInterval)
 	for {
 		<-ticker.C
 		collectStats()
@@ -136,9 +149,17 @@ func sendStats() {
 
 // RunSendStats periodically sends statistics to a collector
 func RunSendStats() {
-	ticker := time.NewTicker(reportInterval)
+	ticker := time.NewTicker(Config.ReportInterval)
 	for {
 		<-ticker.C
 		sendStats()
 	}
+}
+
+// RunAgent is the function to start agent operation
+func RunAgent() {
+	rand.Seed(time.Now().UnixNano())
+	go RunCollectStats()
+	RunSendStats()
+
 }

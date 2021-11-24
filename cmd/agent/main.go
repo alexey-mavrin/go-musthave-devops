@@ -1,14 +1,12 @@
 package main
 
 import (
-	"math/rand"
-	"time"
-
 	"github.com/alexey-mavrin/go-musthave-devops/internal/agent"
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-	go agent.RunCollectStats()
-	agent.RunSendStats()
+	// agent.Config.Server = "http://localhost:8080"
+	// agent.Config.PollInterval = 2 * time.Second
+	// agent.Config.ReportInterval = 10 * time.Second
+	agent.RunAgent()
 }
