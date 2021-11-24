@@ -32,9 +32,14 @@ const (
 func sendStat(statString string) {
 	resp, err := http.Post(defaultServer+statString, contentType, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Sending %s, http status %d", statString, resp.StatusCode)
+	}
 }
 
 func makeStatStringGauge(name string, value float64) string {
