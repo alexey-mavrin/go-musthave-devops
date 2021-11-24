@@ -1,8 +1,9 @@
 package main
 
 import (
-	"internal/server"
 	"net/http"
+
+	"github.com/alexey-mavrin/go-musthave-devops/internal/server"
 )
 
 func main() {

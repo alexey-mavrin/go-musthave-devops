@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"time"
 
-	"internal/agent"
+	"github.com/alexey-mavrin/go-musthave-devops/internal/agent"
 )
 
 func main() {
