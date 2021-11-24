@@ -26,3 +26,6 @@ vendor/
 
 # Vim
 *.swp
+
+# cover report
+cover.html
