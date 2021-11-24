@@ -1,4 +1,4 @@
-module github.com/alexey-mavrin/go-musthave-devops
+module server
 
 go 1.17
 
@@ -12,11 +12,3 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
 )
-
-require internal/agent v1.0.0
-
-require internal/server v1.0.0
-
-replace internal/agent => ./internal/agent
-
-replace internal/server => ./internal/server
