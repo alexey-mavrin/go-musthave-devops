@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"sync"
 
@@ -118,12 +119,26 @@ func MetricHandler(w http.ResponseWriter, r *http.Request) {
 func DumpHandler(w http.ResponseWriter, r *http.Request) {
 	str := ""
 	statistics.mu.Lock()
-	for k, v := range statistics.counters {
-		str = str + fmt.Sprintf("%s %v\n", k, v)
+
+	cNames := make([]string, 0, len(statistics.counters))
+	for k := range statistics.counters {
+		cNames = append(cNames, k)
 	}
-	for k, v := range statistics.gauges {
-		str = str + fmt.Sprintf("%s %v\n", k, v)
+	sort.Strings(cNames)
+
+	gNames := make([]string, 0, len(statistics.gauges))
+	for k := range statistics.gauges {
+		gNames = append(gNames, k)
 	}
+	sort.Strings(gNames)
+
+	for _, n := range cNames {
+		str = str + fmt.Sprintf("%s %v\n", n, statistics.counters[n])
+	}
+	for _, n := range gNames {
+		str = str + fmt.Sprintf("%s %v\n", n, statistics.gauges[n])
+	}
+
 	statistics.mu.Unlock()
 	w.Write([]byte(str))
 }
