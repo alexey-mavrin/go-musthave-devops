@@ -47,10 +47,6 @@ func parseReq(r *http.Request) (statReq, error) {
 	name := chi.URLParam(r, "name")
 	rawVal := chi.URLParam(r, "rawVal")
 
-	if typ != strTypCounter && typ != strTypGauge {
-		return stat, errWrongType
-	}
-
 	if len(name) == 0 {
 		return stat, errNoName
 	}
@@ -59,20 +55,23 @@ func parseReq(r *http.Request) (statReq, error) {
 		return stat, errBadValue
 	}
 
-	if typ == strTypCounter {
+	switch typ {
+	case strTypCounter:
 		stat.statType = statTypeCounter
 		val, err := strconv.Atoi(rawVal)
 		if err != nil {
 			return stat, errBadValue
 		}
 		stat.valueCounter = int64(val)
-	} else if typ == strTypGauge {
+	case strTypGauge:
 		stat.statType = statTypeGauge
 		val, err := strconv.ParseFloat(rawVal, 64)
 		if err != nil {
 			return stat, errBadValue
 		}
 		stat.valueGauge = val
+	default:
+		return stat, errWrongType
 	}
 
 	stat.name = name
