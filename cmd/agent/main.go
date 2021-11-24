@@ -43,13 +43,11 @@ func sendStat(statString string) {
 }
 
 func makeStatStringGauge(name string, value float64) string {
-	str := fmt.Sprintf("/update/gauge/%s/%G", name, value)
-	return str
+	return fmt.Sprintf("/update/gauge/%s/%G", name, value)
 }
 
 func makeStatStringCounter(name string, value int64) string {
-	str := fmt.Sprintf("/update/counter/%s/%d", name, value)
-	return str
+	return fmt.Sprintf("/update/counter/%s/%d", name, value)
 }
 
 func collectStats() {
