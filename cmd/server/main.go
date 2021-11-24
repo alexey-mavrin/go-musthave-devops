@@ -148,35 +148,26 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(r.Method, r.URL)
 	stat, err := parseReq(r)
 
-	if err == errWrongOp {
+	switch err {
+	case errWrongOp, errNoName:
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("Not Found"))
 		return
-	}
-
-	if err == errWrongType {
+	case errWrongType:
 		w.WriteHeader(http.StatusNotImplemented)
 		w.Write([]byte("Not Implemented"))
 		return
-	}
-
-	if err == errNoName {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Not Found"))
-		return
-	}
-
-	if err == errBadValue {
+	case errBadValue:
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Bad Request"))
 		return
 	}
 
 	statistics.mu.Lock()
-	if stat.statType == statTypeCounter {
+	switch stat.statType {
+	case statTypeCounter:
 		statistics.counters[stat.name] += stat.valueCounter
-	}
-	if stat.statType == statTypeGauge {
+	case statTypeGauge:
 		statistics.gauges[stat.name] = stat.valueGauge
 	}
 	statistics.mu.Unlock()
