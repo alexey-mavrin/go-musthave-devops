@@ -52,10 +52,6 @@ func parseReq(r *http.Request) (statReq, error) {
 		return stat, errNoName
 	}
 
-	if len(rawVal) == 0 {
-		return stat, errBadValue
-	}
-
 	switch typ {
 	case strTypCounter:
 		stat.statType = statTypeCounter

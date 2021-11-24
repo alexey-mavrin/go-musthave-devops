@@ -122,9 +122,27 @@ func TestRouter(t *testing.T) {
 			want:   want{code: 400},
 		},
 		{
-			name:   "counter bad gauge val",
+			name:   "gauge bad gauge val",
 			method: "POST",
 			args:   "/update/gauge/x/1.2.3",
+			want:   want{code: 400},
+		},
+		{
+			name:   "get unknown gauge",
+			method: "GET",
+			args:   "/value/gauge/nosuchname",
+			want:   want{code: 404},
+		},
+		{
+			name:   "get unknown counter",
+			method: "GET",
+			args:   "/value/counter/nosuchname",
+			want:   want{code: 404},
+		},
+		{
+			name:   "get unknown type",
+			method: "GET",
+			args:   "/value/float/name",
 			want:   want{code: 400},
 		},
 	}
