@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"sort"
 	"strconv"
@@ -155,11 +154,16 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.Header.Get("Content-Type") != "application/json" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Bad Request"))
+		return
+	}
+
 	var m common.Metrics
 
 	err = json.Unmarshal(body, &m)
 	if err != nil {
-		fmt.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Bad Request"))
 		return
@@ -187,7 +191,6 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	stat.name = m.ID
 
-	log.Println(m, stat)
 	updateStatStorage(stat)
 
 	w.WriteHeader(http.StatusOK)
