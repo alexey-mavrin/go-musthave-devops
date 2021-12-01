@@ -1,13 +1,18 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"sort"
 	"strconv"
 	"sync"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/alexey-mavrin/go-musthave-devops/internal/common"
 )
 
 type statType int
@@ -139,6 +144,56 @@ func DumpHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(str))
 }
 
+// JSONUpdateHandler — stores metrics in server from json updates
+func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r.Method, r.URL)
+	body, err := ioutil.ReadAll(r.Body)
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Bad Request"))
+		return
+	}
+
+	var m common.Metrics
+
+	err = json.Unmarshal(body, &m)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Bad Request"))
+		return
+	}
+
+	var stat statReq
+	switch m.MType {
+	case strTypCounter:
+		stat.statType = statTypeCounter
+		stat.valueCounter = *m.Delta
+	case strTypGauge:
+		stat.statType = statTypeGauge
+		stat.valueGauge = *m.Value
+	default:
+		w.WriteHeader(http.StatusNotImplemented)
+		w.Write([]byte("Not Implemented"))
+		return
+	}
+
+	if m.ID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Bad Request"))
+		return
+	}
+
+	stat.name = m.ID
+
+	log.Println(m, stat)
+	updateStatStorage(stat)
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+}
+
 // UpdateHandler — stores metrics in server
 func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(r.Method, r.URL)
@@ -159,6 +214,13 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	updateStatStorage(stat)
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+}
+
+func updateStatStorage(stat statReq) {
 	statistics.mu.Lock()
 	switch stat.statType {
 	case statTypeCounter:
@@ -167,9 +229,6 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		statistics.gauges[stat.name] = stat.valueGauge
 	}
 	statistics.mu.Unlock()
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
 }
 
 // Router return chi.Router for testing and actual work
@@ -179,6 +238,7 @@ func Router() chi.Router {
 	r := chi.NewRouter()
 	r.Get("/", DumpHandler)
 	r.Get("/value/{typ}/{name}", MetricHandler)
+	r.Post("/update/", JSONUpdateHandler)
 	r.Post("/update/{typ}/{name}/", Handler400)
 	r.Post("/update/{typ}/{name}/{rawVal}", UpdateHandler)
 	return r
