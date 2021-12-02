@@ -114,6 +114,7 @@ func sendStats() {
 	PauseTotalNs := makeStatStringGauge("PauseTotalNs", float64(myStatData.memStats.PauseTotalNs))
 	StackInuse := makeStatStringGauge("StackInuse", float64(myStatData.memStats.StackInuse))
 	StackSys := makeStatStringGauge("StackSys", float64(myStatData.memStats.StackSys))
+	TotalAlloc := makeStatStringGauge("TotalAlloc", float64(myStatData.memStats.TotalAlloc))
 	Sys := makeStatStringGauge("Sys", float64(myStatData.memStats.Sys))
 	myStatData.mu.Unlock()
 
@@ -144,6 +145,7 @@ func sendStats() {
 	sendStat(PauseTotalNs)
 	sendStat(StackInuse)
 	sendStat(StackSys)
+	sendStat(TotalAlloc)
 	sendStat(Sys)
 }
 
