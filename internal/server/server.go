@@ -90,16 +90,17 @@ func Handler400(w http.ResponseWriter, r *http.Request) {
 func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(r.Method, r.URL)
 	body, err := ioutil.ReadAll(r.Body)
+	w.Header().Set("Content-Type", "application/json")
 
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Bad Request"))
+		w.Write([]byte(`{"Status":"Bad Request"}`))
 		return
 	}
 
 	if r.Header.Get("Content-Type") != "application/json" {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Bad Request"))
+		w.Write([]byte(`{"Status":"Bad Request"}`))
 		return
 	}
 
@@ -108,13 +109,13 @@ func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(body, &m)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Bad Request"))
+		w.Write([]byte(`{"Status":"Bad Request"}`))
 		return
 	}
 
 	if m.ID == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Bad Request"))
+		w.Write([]byte(`{"Status":"Bad Request"}`))
 		return
 	}
 
@@ -126,19 +127,22 @@ func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 		val, ok := statistics.counters[m.ID]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("Not Found"))
+			w.Write([]byte(`{"Status":"Not Found"}`))
+			return
 		}
 		m.Delta = &val
 	case strTypGauge:
 		val, ok := statistics.gauges[m.ID]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("Not Found"))
+			w.Write([]byte(`{"Status":"Not Found"}`))
+			return
 		}
 		m.Value = &val
 	default:
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Bad Request"))
+		w.Write([]byte(`{"Status":"Bad Request"}`))
+		return
 	}
 	ret, _ := json.Marshal(m)
 	w.Write(ret)
@@ -205,6 +209,7 @@ func DumpHandler(w http.ResponseWriter, r *http.Request) {
 func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(r.Method, r.URL)
 	body, err := ioutil.ReadAll(r.Body)
+	w.Header().Set("Content-Type", "application/json")
 
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -214,7 +219,7 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Header.Get("Content-Type") != "application/json" {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Bad Request"))
+		w.Write([]byte(`{"Status":"Bad Request"}`))
 		return
 	}
 
@@ -223,7 +228,7 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(body, &m)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Bad Request"))
+		w.Write([]byte(`{"Status":"Bad Request"}`))
 		return
 	}
 
@@ -237,13 +242,13 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		stat.valueGauge = *m.Value
 	default:
 		w.WriteHeader(http.StatusNotImplemented)
-		w.Write([]byte("Not Implemented"))
+		w.Write([]byte(`{"Status":"Not Implemented"}`))
 		return
 	}
 
 	if m.ID == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Bad Request"))
+		w.Write([]byte(`{"Status":"Bad Request"}`))
 		return
 	}
 
@@ -252,7 +257,7 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	updateStatStorage(stat)
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	w.Write([]byte(`{"Status":"OK"}`))
 }
 
 // UpdateHandler — stores metrics in server
