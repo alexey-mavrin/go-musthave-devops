@@ -88,7 +88,8 @@ func sendStats() {
 	PollCount := makeStatStringCounter("PollCount", myStatData.PollCount)
 	myStatData.PollCount = 0
 
-	RandomValue := makeStatStringCounter("RandomValue", int64(myStatData.RandomValue))
+	RandomValueCounter := makeStatStringCounter("RandomValue", int64(myStatData.RandomValue))
+	RandomValueGauge := makeStatStringGauge("RandomValue", float64(myStatData.RandomValue))
 	Alloc := makeStatStringGauge("Alloc", float64(myStatData.memStats.Alloc))
 	BuckHashSys := makeStatStringGauge("BuckHashSys", float64(myStatData.memStats.BuckHashSys))
 	Frees := makeStatStringGauge("Frees", float64(myStatData.memStats.Frees))
@@ -119,7 +120,8 @@ func sendStats() {
 	myStatData.mu.Unlock()
 
 	sendStat(PollCount)
-	sendStat(RandomValue)
+	sendStat(RandomValueCounter)
+	sendStat(RandomValueGauge)
 	sendStat(Alloc)
 	sendStat(BuckHashSys)
 	sendStat(Frees)
