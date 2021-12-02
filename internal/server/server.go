@@ -88,7 +88,8 @@ func Handler400(w http.ResponseWriter, r *http.Request) {
 
 // JSONMetricHandler prints all available metrics
 func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.Method, r.URL)
+	fmt.Print(r.Method, r.URL)
+	defer fmt.Println("")
 	body, err := ioutil.ReadAll(r.Body)
 	w.Header().Set("Content-Type", "application/json")
 
@@ -119,6 +120,7 @@ func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Print(" type: ", m.MType, ", id: ", m.ID)
 	statistics.mu.Lock()
 	defer statistics.mu.Unlock()
 
@@ -207,7 +209,9 @@ func DumpHandler(w http.ResponseWriter, r *http.Request) {
 
 // JSONUpdateHandler — stores metrics in server from json updates
 func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.Method, r.URL)
+	fmt.Print(r.Method, r.URL)
+	defer fmt.Println("")
+
 	body, err := ioutil.ReadAll(r.Body)
 	w.Header().Set("Content-Type", "application/json")
 
@@ -232,14 +236,17 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Print(" type: ", m.MType, ", id: ", m.ID)
 	var stat statReq
 	switch m.MType {
 	case strTypCounter:
 		stat.statType = statTypeCounter
 		stat.valueCounter = *m.Delta
+		fmt.Print(", delta: ", *m.Delta)
 	case strTypGauge:
 		stat.statType = statTypeGauge
 		stat.valueGauge = *m.Value
+		fmt.Print(", value: ", *m.Value)
 	default:
 		w.WriteHeader(http.StatusNotImplemented)
 		w.Write([]byte(`{"Status":"Not Implemented"}`))
