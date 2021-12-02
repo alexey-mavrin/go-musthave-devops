@@ -86,6 +86,64 @@ func Handler400(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Bad Request"))
 }
 
+// JSONMetricHandler prints all available metrics
+func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r.Method, r.URL)
+	body, err := ioutil.ReadAll(r.Body)
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Bad Request"))
+		return
+	}
+
+	if r.Header.Get("Content-Type") != "application/json" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Bad Request"))
+		return
+	}
+
+	var m common.Metrics
+
+	err = json.Unmarshal(body, &m)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Bad Request"))
+		return
+	}
+
+	if m.ID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Bad Request"))
+		return
+	}
+
+	statistics.mu.Lock()
+	defer statistics.mu.Unlock()
+
+	switch m.MType {
+	case strTypCounter:
+		val, ok := statistics.counters[m.ID]
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("Not Found"))
+		}
+		m.Delta = &val
+	case strTypGauge:
+		val, ok := statistics.gauges[m.ID]
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("Not Found"))
+		}
+		m.Value = &val
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Bad Request"))
+	}
+	ret, _ := json.Marshal(m)
+	w.Write(ret)
+}
+
 // MetricHandler prints all available metrics
 func MetricHandler(w http.ResponseWriter, r *http.Request) {
 	typ := chi.URLParam(r, "typ")
@@ -241,6 +299,7 @@ func Router() chi.Router {
 	r := chi.NewRouter()
 	r.Get("/", DumpHandler)
 	r.Get("/value/{typ}/{name}", MetricHandler)
+	r.Post("/value/", JSONMetricHandler)
 	r.Post("/update/", JSONUpdateHandler)
 	r.Post("/update/{typ}/{name}/", Handler400)
 	r.Post("/update/{typ}/{name}/{rawVal}", UpdateHandler)
