@@ -88,14 +88,14 @@ func Handler400(w http.ResponseWriter, r *http.Request) {
 
 // JSONMetricHandler prints all available metrics
 func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Print(r.Method, r.URL)
+	fmt.Print(r.Method, " ", r.URL)
 	defer fmt.Println("")
 	body, err := ioutil.ReadAll(r.Body)
 	w.Header().Set("Content-Type", "application/json")
 
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"Status":"Bad Request"}`))
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"Status":"Internal Server Error"}`))
 		return
 	}
 
@@ -209,15 +209,15 @@ func DumpHandler(w http.ResponseWriter, r *http.Request) {
 
 // JSONUpdateHandler — stores metrics in server from json updates
 func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Print(r.Method, r.URL)
+	fmt.Print(r.Method, " ", r.URL)
 	defer fmt.Println("")
 
 	body, err := ioutil.ReadAll(r.Body)
 	w.Header().Set("Content-Type", "application/json")
 
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Bad Request"))
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"Status":"Internal Server Error"}`))
 		return
 	}
 
