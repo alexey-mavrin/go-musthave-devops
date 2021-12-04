@@ -293,7 +293,8 @@ func TestRouter(t *testing.T) {
 	tmpFile := tmpDir + "/1.json"
 	Config.StoreFile = tmpFile
 
-	testRequest(t, ts, "POST", "/update/counter/c123/123", nil, false)
+	resp, _ := testRequest(t, ts, "POST", "/update/counter/c123/123", nil, false)
+	resp.Body.Close()
 
 	tmpF, _ := os.OpenFile(tmpFile, os.O_RDONLY, 0)
 
