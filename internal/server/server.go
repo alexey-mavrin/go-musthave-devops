@@ -60,13 +60,15 @@ type statReq struct {
 	valueGauge   float64
 }
 
+func init() {
+	statistics.Counters = make(map[string]int64)
+	statistics.Gauges = make(map[string]float64)
+}
+
 // StartServer starts server
 func StartServer() {
 	if Config.Restore && Config.StoreFile != "" {
 		loadStats()
-	} else {
-		statistics.Counters = make(map[string]int64)
-		statistics.Gauges = make(map[string]float64)
 	}
 
 	if Config.StoreInterval > 0 && Config.StoreFile != "" {
