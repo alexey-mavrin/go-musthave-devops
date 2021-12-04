@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -286,6 +287,23 @@ func TestRouter(t *testing.T) {
 			}
 		})
 	}
+
+	tmpDir := os.TempDir()
+	os.Mkdir(tmpDir, 0755)
+	tmpFile := tmpDir + "/1.json"
+	Config.StoreFile = tmpFile
+
+	testRequest(t, ts, "POST", "/update/counter/c123/123", nil, false)
+
+	tmpF, _ := os.OpenFile(tmpFile, os.O_RDONLY, 0)
+
+	tmpBuf, _ := io.ReadAll(tmpF)
+	assert.Contains(t, string(tmpBuf), `"c123":123`)
+	t.Logf(string(tmpBuf))
+
+	statistics.Counters["c123"] = 0
+	loadStats()
+	assert.Equal(t, statistics.Counters["c123"], int64(123))
 }
 
 func testRequest(t *testing.T, ts *httptest.Server, method, path string, r io.Reader, useJSON bool) (*http.Response, string) {
