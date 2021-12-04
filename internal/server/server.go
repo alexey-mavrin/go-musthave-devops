@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -16,10 +19,21 @@ import (
 
 type statType int
 
+type serverConfig struct {
+	Address       string
+	StoreInterval time.Duration
+	StoreFile     string
+	Restore       bool
+}
+
+// Config stores server configuration
+var Config serverConfig = serverConfig{}
+
+var mu sync.Mutex
+
 var statistics struct {
-	mu       sync.Mutex
-	counters map[string]int64
-	gauges   map[string]float64
+	Counters map[string]int64
+	Gauges   map[string]float64
 }
 
 const (
@@ -44,6 +58,64 @@ type statReq struct {
 	name         string
 	valueCounter int64
 	valueGauge   float64
+}
+
+// StartServer starts server
+func StartServer() {
+	if Config.Restore && Config.StoreFile != "" {
+		loadStats()
+	} else {
+		statistics.Counters = make(map[string]int64)
+		statistics.Gauges = make(map[string]float64)
+	}
+
+	if Config.StoreInterval > 0 && Config.StoreFile != "" {
+		go statSaver()
+	}
+	r := Router()
+	http.ListenAndServe(Config.Address, r)
+}
+
+func statSaver() {
+	ticker := time.NewTicker(Config.StoreInterval)
+	for {
+		<-ticker.C
+		mu.Lock()
+		storeStats()
+		mu.Unlock()
+	}
+
+}
+
+func storeStats() {
+	flags := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
+
+	f, err := os.OpenFile(Config.StoreFile, flags, 0644)
+	if err != nil {
+		log.Fatal("cannot open file for writing: ", err)
+	}
+	defer f.Close()
+
+	if err := json.NewEncoder(f).Encode(statistics); err != nil {
+		log.Fatal("cannot encode statistics: ", err)
+	}
+}
+
+func loadStats() {
+	flags := os.O_RDONLY
+	mu.Lock()
+	defer mu.Unlock()
+
+	f, err := os.OpenFile(Config.StoreFile, flags, 0)
+	if err != nil {
+		log.Print("cannot open file for reading ", err)
+		return
+	}
+	defer f.Close()
+
+	if err := json.NewDecoder(f).Decode(&statistics); err != nil {
+		log.Fatal("cannot decode statistics ", err)
+	}
 }
 
 func parseReq(r *http.Request) (statReq, error) {
@@ -121,12 +193,12 @@ func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Print(" type: ", m.MType, ", id: ", m.ID)
-	statistics.mu.Lock()
-	defer statistics.mu.Unlock()
+	mu.Lock()
+	defer mu.Unlock()
 
 	switch m.MType {
 	case strTypCounter:
-		val, ok := statistics.counters[m.ID]
+		val, ok := statistics.Counters[m.ID]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte(`{"Status":"Not Found"}`))
@@ -134,7 +206,7 @@ func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		m.Delta = &val
 	case strTypGauge:
-		val, ok := statistics.gauges[m.ID]
+		val, ok := statistics.Gauges[m.ID]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte(`{"Status":"Not Found"}`))
@@ -156,18 +228,18 @@ func MetricHandler(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	fmt.Println("GET", typ, name)
 
-	statistics.mu.Lock()
-	defer statistics.mu.Unlock()
+	mu.Lock()
+	defer mu.Unlock()
 
 	if typ == strTypCounter {
-		val, ok := statistics.counters[name]
+		val, ok := statistics.Counters[name]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte("Not Found"))
 		}
 		w.Write([]byte(fmt.Sprint(val)))
 	} else if typ == strTypGauge {
-		val, ok := statistics.gauges[name]
+		val, ok := statistics.Gauges[name]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte("Not Found"))
@@ -182,28 +254,28 @@ func MetricHandler(w http.ResponseWriter, r *http.Request) {
 // DumpHandler prints all available metrics
 func DumpHandler(w http.ResponseWriter, r *http.Request) {
 	str := ""
-	statistics.mu.Lock()
+	mu.Lock()
 
-	cNames := make([]string, 0, len(statistics.counters))
-	for k := range statistics.counters {
+	cNames := make([]string, 0, len(statistics.Counters))
+	for k := range statistics.Counters {
 		cNames = append(cNames, k)
 	}
 	sort.Strings(cNames)
 
-	gNames := make([]string, 0, len(statistics.gauges))
-	for k := range statistics.gauges {
+	gNames := make([]string, 0, len(statistics.Gauges))
+	for k := range statistics.Gauges {
 		gNames = append(gNames, k)
 	}
 	sort.Strings(gNames)
 
 	for _, n := range cNames {
-		str = str + fmt.Sprintf("%s %v\n", n, statistics.counters[n])
+		str = str + fmt.Sprintf("%s %v\n", n, statistics.Counters[n])
 	}
 	for _, n := range gNames {
-		str = str + fmt.Sprintf("%s %v\n", n, statistics.gauges[n])
+		str = str + fmt.Sprintf("%s %v\n", n, statistics.Gauges[n])
 	}
 
-	statistics.mu.Unlock()
+	mu.Unlock()
 	w.Write([]byte(str))
 }
 
@@ -294,20 +366,23 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateStatStorage(stat statReq) {
-	statistics.mu.Lock()
+	mu.Lock()
 	switch stat.statType {
 	case statTypeCounter:
-		statistics.counters[stat.name] += stat.valueCounter
+		statistics.Counters[stat.name] += stat.valueCounter
 	case statTypeGauge:
-		statistics.gauges[stat.name] = stat.valueGauge
+		statistics.Gauges[stat.name] = stat.valueGauge
 	}
-	statistics.mu.Unlock()
+
+	if Config.StoreInterval == 0 && Config.StoreFile != "" {
+		storeStats()
+	}
+
+	mu.Unlock()
 }
 
 // Router return chi.Router for testing and actual work
 func Router() chi.Router {
-	statistics.counters = make(map[string]int64)
-	statistics.gauges = make(map[string]float64)
 	r := chi.NewRouter()
 	r.Get("/", DumpHandler)
 	r.Get("/value/{typ}/{name}", MetricHandler)
