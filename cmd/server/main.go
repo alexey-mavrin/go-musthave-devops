@@ -41,7 +41,7 @@ func setServerArgs() {
 	log.Print(cfg)
 
 	addressFlag := flag.String("a", defaultAddress, "bind address")
-	intervalFlag := flag.String("i", defaultInterval, "store interval")
+	storeIntervalFlag := flag.String("i", defaultInterval, "store interval")
 	fileFlag := flag.String("f", defaultStoreFile, "store file")
 	restoreFlag := flag.Bool("r", defaultRestore, "restore")
 
@@ -56,9 +56,9 @@ func setServerArgs() {
 	if cfg.StoreInterval != nil {
 		server.Config.StoreInterval = *cfg.StoreInterval
 	} else {
-		storeInterval, err := time.ParseDuration(*intervalFlag)
+		storeInterval, err := time.ParseDuration(*storeIntervalFlag)
 		if err != nil {
-			log.Fatal("cant parse duration ", intervalFlag)
+			log.Fatal("cant parse duration ", *storeIntervalFlag)
 		}
 		server.Config.StoreInterval = storeInterval
 	}
