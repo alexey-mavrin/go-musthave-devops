@@ -78,21 +78,29 @@ func StartServer() {
 	}
 	r := Router()
 
-	go http.ListenAndServe(Config.Address, r)
+	c := make(chan error)
+	go func() {
+		err := http.ListenAndServe(Config.Address, r)
+		c <- err
+	}()
 
 	signalChannel := make(chan os.Signal, 2)
 	// Сервер должен штатно завершаться по сигналам: syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT
 	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	sig := <-signalChannel
-	switch sig {
-	case os.Interrupt:
-		log.Println("sigint")
-	case syscall.SIGTERM:
-		log.Println("sigterm")
-	case syscall.SIGINT:
-		log.Println("sigint")
-	case syscall.SIGQUIT:
-		log.Println("sigquit")
+	select {
+	case sig := <-signalChannel:
+		switch sig {
+		case os.Interrupt:
+			log.Println("sigint")
+		case syscall.SIGTERM:
+			log.Println("sigterm")
+		case syscall.SIGINT:
+			log.Println("sigint")
+		case syscall.SIGQUIT:
+			log.Println("sigquit")
+		}
+	case err := <-c:
+		log.Fatal(err)
 	}
 
 	mu.Lock()
