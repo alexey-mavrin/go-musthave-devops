@@ -7,9 +7,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"sort"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -75,7 +77,29 @@ func StartServer() {
 		go statSaver()
 	}
 	r := Router()
-	http.ListenAndServe(Config.Address, r)
+
+	go http.ListenAndServe(Config.Address, r)
+
+	signalChannel := make(chan os.Signal, 2)
+	// Сервер должен штатно завершаться по сигналам: syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT
+	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	sig := <-signalChannel
+	switch sig {
+	case os.Interrupt:
+		log.Println("sigint")
+	case syscall.SIGTERM:
+		log.Println("sigterm")
+	case syscall.SIGINT:
+		log.Println("sigint")
+	case syscall.SIGQUIT:
+		log.Println("sigquit")
+	}
+
+	mu.Lock()
+	log.Print("server finished, storint stats")
+	storeStats()
+	mu.Unlock()
+
 }
 
 func statSaver() {
