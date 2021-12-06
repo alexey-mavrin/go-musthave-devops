@@ -44,10 +44,12 @@ func setServerArgs() {
 	fileFlag := flag.String("f", defaultStoreFile, "store file")
 	restoreFlag := flag.Bool("r", defaultRestore, "restore")
 
-	log.Printf("server is invoked with ENV address %v store interval %v store file %v restore %v", cfg.Address, cfg.StoreInterval, cfg.StoreFile, cfg.Restore)
-	log.Printf("server is invoked with flags address %v store interval %v store file %v restore %v", *addressFlag, *storeIntervalFlag, *fileFlag, *restoreFlag)
-
 	flag.Parse()
+
+	jsonEnv, _ := json.Marshal(cfg)
+
+	log.Printf("server is invoked with ENV %v", string(jsonEnv))
+	log.Printf("server is invoked with flags address %v store interval %v store file %v restore %v", *addressFlag, *storeIntervalFlag, *fileFlag, *restoreFlag)
 
 	if cfg.Address != nil {
 		server.Config.Address = *cfg.Address
