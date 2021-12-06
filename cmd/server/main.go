@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	defaultAddress   = "localhost:8080"
-	defaultInterval  = "300s"
-	defaultStoreFile = "/tmp/devops-metrics-db.json"
-	defaultRestore   = true
+	defaultAddress       = "localhost:8080"
+	defaultStoreInterval = "300s"
+	defaultStoreFile     = "/tmp/devops-metrics-db.json"
+	defaultRestore       = true
 )
 
 type config struct {
@@ -23,6 +23,16 @@ type config struct {
 	StoreInterval *time.Duration `env:"STORE_INTERVAL"`
 	StoreFile     *string        `env:"STORE_FILE"`
 	Restore       *bool          `env:"RESTORE"`
+}
+
+func isFlagPassed(name string) bool {
+	found := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			found = true
+		}
+	})
+	return found
 }
 
 func setServerArgs() {
@@ -40,7 +50,7 @@ func setServerArgs() {
 	}
 
 	addressFlag := flag.String("a", defaultAddress, "bind address")
-	storeIntervalFlag := flag.String("i", defaultInterval, "store interval")
+	storeIntervalFlag := flag.String("i", defaultStoreInterval, "store interval")
 	fileFlag := flag.String("f", defaultStoreFile, "store file")
 	restoreFlag := flag.Bool("r", defaultRestore, "restore")
 
@@ -51,32 +61,45 @@ func setServerArgs() {
 	log.Printf("server is invoked with ENV %v", string(jsonEnv))
 	log.Printf("server is invoked with flags address %v store interval %v store file %v restore %v", *addressFlag, *storeIntervalFlag, *fileFlag, *restoreFlag)
 
-	if cfg.Address != nil {
+	if isFlagPassed("a") {
+		server.Config.Address = *addressFlag
+	} else if cfg.Address != nil {
 		server.Config.Address = *cfg.Address
 	} else {
-		server.Config.Address = *addressFlag
+		server.Config.Address = defaultAddress
 	}
 
-	if cfg.StoreInterval != nil {
-		server.Config.StoreInterval = *cfg.StoreInterval
-	} else {
+	if isFlagPassed("i") {
 		storeInterval, err := time.ParseDuration(*storeIntervalFlag)
 		if err != nil {
 			log.Fatal("cant parse duration ", *storeIntervalFlag)
 		}
 		server.Config.StoreInterval = storeInterval
+	} else if cfg.StoreInterval != nil {
+		server.Config.StoreInterval = *cfg.StoreInterval
+	} else {
+		storeInterval, err := time.ParseDuration(defaultStoreInterval)
+		if err != nil {
+			log.Fatal("cant parse duration ", *storeIntervalFlag)
+		}
+		server.Config.StoreInterval = storeInterval
+
 	}
 
-	if cfg.StoreFile != nil {
+	if isFlagPassed("f") {
+		server.Config.StoreFile = *fileFlag
+	} else if cfg.StoreFile != nil {
 		server.Config.StoreFile = *cfg.StoreFile
 	} else {
-		server.Config.StoreFile = *fileFlag
+		server.Config.StoreFile = defaultStoreFile
 	}
 
-	if cfg.Restore != nil {
+	if isFlagPassed("r") {
+		server.Config.Restore = *restoreFlag
+	} else if cfg.Restore != nil {
 		server.Config.Restore = *cfg.Restore
 	} else {
-		server.Config.Restore = *restoreFlag
+		server.Config.Restore = defaultRestore
 	}
 
 }

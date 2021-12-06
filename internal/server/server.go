@@ -96,7 +96,7 @@ func StartServer() {
 	}
 
 	mu.Lock()
-	log.Print("server finished, storint stats")
+	log.Print("server finished, storing stats")
 	storeStats()
 	mu.Unlock()
 
