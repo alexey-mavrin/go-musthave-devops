@@ -38,12 +38,14 @@ func setServerArgs() {
 		empty := ""
 		cfg.StoreFile = &empty
 	}
-	log.Print(cfg)
 
 	addressFlag := flag.String("a", defaultAddress, "bind address")
 	storeIntervalFlag := flag.String("i", defaultInterval, "store interval")
 	fileFlag := flag.String("f", defaultStoreFile, "store file")
 	restoreFlag := flag.Bool("r", defaultRestore, "restore")
+
+	log.Printf("server is invoked with ENV address %v store interval %v store file %v restore %v", cfg.Address, cfg.StoreInterval, cfg.StoreFile, cfg.Restore)
+	log.Printf("server is invoked with flags address %v store interval %v store file %v restore %v", *addressFlag, *storeIntervalFlag, *fileFlag, *restoreFlag)
 
 	flag.Parse()
 
