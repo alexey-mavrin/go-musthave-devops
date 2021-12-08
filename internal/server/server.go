@@ -91,13 +91,13 @@ func StartServer() {
 	case sig := <-signalChannel:
 		switch sig {
 		case os.Interrupt:
-			log.Println("sigint")
+			log.Print("sigint")
 		case syscall.SIGTERM:
-			log.Println("sigterm")
+			log.Print("sigterm")
 		case syscall.SIGINT:
-			log.Println("sigint")
+			log.Print("sigint")
 		case syscall.SIGQUIT:
-			log.Println("sigquit")
+			log.Print("sigquit")
 		}
 	case err := <-c:
 		log.Fatal(err)
@@ -194,8 +194,7 @@ func Handler400(w http.ResponseWriter, r *http.Request) {
 
 // JSONMetricHandler prints all available metrics
 func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Print(r.Method, " ", r.URL)
-	defer fmt.Println("")
+	log.Print(r.Method, " ", r.URL)
 	body, err := ioutil.ReadAll(r.Body)
 	w.Header().Set("Content-Type", "application/json")
 
@@ -226,7 +225,7 @@ func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Print(" type: ", m.MType, ", id: ", m.ID)
+	log.Print("type: ", m.MType, ", id: ", m.ID)
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -260,7 +259,7 @@ func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 func MetricHandler(w http.ResponseWriter, r *http.Request) {
 	typ := chi.URLParam(r, "typ")
 	name := chi.URLParam(r, "name")
-	fmt.Println("GET", typ, name)
+	log.Println("GET", typ, name)
 
 	mu.Lock()
 	defer mu.Unlock()
@@ -315,8 +314,7 @@ func DumpHandler(w http.ResponseWriter, r *http.Request) {
 
 // JSONUpdateHandler — stores metrics in server from json updates
 func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Print(r.Method, " ", r.URL)
-	defer fmt.Println("")
+	log.Print(r.Method, " ", r.URL)
 
 	body, err := ioutil.ReadAll(r.Body)
 	w.Header().Set("Content-Type", "application/json")
@@ -342,17 +340,17 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Print(" type: ", m.MType, ", id: ", m.ID)
+	log.Print("type: ", m.MType, ", id: ", m.ID)
 	var stat statReq
 	switch m.MType {
 	case strTypCounter:
 		stat.statType = statTypeCounter
 		stat.valueCounter = *m.Delta
-		fmt.Print(", delta: ", *m.Delta)
+		log.Print(", delta: ", *m.Delta)
 	case strTypGauge:
 		stat.statType = statTypeGauge
 		stat.valueGauge = *m.Value
-		fmt.Print(", value: ", *m.Value)
+		log.Print(", value: ", *m.Value)
 	default:
 		w.WriteHeader(http.StatusNotImplemented)
 		w.Write([]byte(`{"Status":"Not Implemented"}`))
@@ -375,7 +373,7 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 // UpdateHandler — stores metrics in server
 func UpdateHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.Method, r.URL)
+	log.Print(r.Method, r.URL)
 	stat, err := parseReq(r)
 
 	switch err {
