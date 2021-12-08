@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"log"
 	"os"
@@ -13,7 +12,7 @@ import (
 
 const (
 	defaultAddress       = "localhost:8080"
-	defaultStoreInterval = "300s"
+	defaultStoreInterval = time.Second * 300
 	defaultStoreFile     = "/tmp/devops-metrics-db.json"
 	defaultRestore       = true
 )
@@ -50,65 +49,43 @@ func setServerArgs() {
 	}
 
 	addressFlag := flag.String("a", defaultAddress, "bind address")
-	storeIntervalFlag := flag.String("i", defaultStoreInterval, "store interval")
+	storeIntervalFlag := flag.Duration("i", defaultStoreInterval, "store interval")
 	fileFlag := flag.String("f", defaultStoreFile, "store file")
 	restoreFlag := flag.Bool("r", defaultRestore, "restore")
 
 	flag.Parse()
 
-	jsonEnv, _ := json.Marshal(cfg)
-
-	log.Printf("server is invoked with ENV %v", string(jsonEnv))
+	log.Printf("server is invoked with ENV %+v", cfg)
 	log.Printf("server is invoked with flags address %v store interval %v store file %v restore %v", *addressFlag, *storeIntervalFlag, *fileFlag, *restoreFlag)
 
+	server.Config.Address = *addressFlag
 	if cfg.Address != nil {
 		server.Config.Address = *cfg.Address
-	} else if isFlagPassed("a") {
-		server.Config.Address = *addressFlag
-	} else {
-		server.Config.Address = defaultAddress
 	}
-
+	server.Config.StoreInterval = *storeIntervalFlag
 	if cfg.StoreInterval != nil {
 		server.Config.StoreInterval = *cfg.StoreInterval
-	} else if isFlagPassed("i") {
-		storeInterval, err := time.ParseDuration(*storeIntervalFlag)
-		if err != nil {
-			log.Fatal("cant parse duration ", *storeIntervalFlag)
-		}
-		server.Config.StoreInterval = storeInterval
-	} else {
-		storeInterval, err := time.ParseDuration(defaultStoreInterval)
-		if err != nil {
-			log.Fatal("cant parse duration ", *storeIntervalFlag)
-		}
-		server.Config.StoreInterval = storeInterval
-
 	}
 
+	// we need to distinguish between default string value and empty env var
+	server.Config.StoreFile = defaultStoreFile
 	if cfg.StoreFile != nil {
 		server.Config.StoreFile = *cfg.StoreFile
-	} else if isFlagPassed("f") {
+	}
+	if isFlagPassed("f") {
 		server.Config.StoreFile = *fileFlag
-	} else {
-		server.Config.StoreFile = defaultStoreFile
 	}
 
+	server.Config.Restore = *restoreFlag
 	if cfg.Restore != nil {
 		server.Config.Restore = *cfg.Restore
-	} else if isFlagPassed("r") {
-		server.Config.Restore = *restoreFlag
-	} else {
-		server.Config.Restore = defaultRestore
 	}
-
 }
 
 func main() {
 	setServerArgs()
 
-	jsonConfig, _ := json.Marshal(server.Config)
-	log.Print("server started with ", string(jsonConfig))
+	log.Printf("server started with %+v", server.Config)
 
 	server.StartServer()
 }

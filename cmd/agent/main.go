@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"log"
 	"time"
@@ -19,55 +18,48 @@ type config struct {
 const (
 	defaultAddress        = "localhost:8080"
 	defaultScheme         = "http"
-	defaultPollInterval   = "2s"
-	defaultReportInterval = "10s"
+	defaultPollInterval   = time.Second * 2
+	defaultReportInterval = time.Second * 10
 )
 
-func setAgentArgs() {
+func setAgentArgs() error {
 	var cfg config
 	err := env.Parse(&cfg)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	addressFlag := flag.String("a", defaultAddress, "server address")
-	pollIntervalFlag := flag.String("p", defaultPollInterval, "poll interval")
-	reportIntervalFlag := flag.String("r", defaultReportInterval, "report interval")
+	pollIntervalFlag := flag.Duration("p", defaultPollInterval, "poll interval")
+	reportIntervalFlag := flag.Duration("r", defaultReportInterval, "report interval")
 
 	flag.Parse()
 
+	agent.Config.Server = defaultScheme + "://" + *addressFlag
 	if cfg.Address != nil {
 		agent.Config.Server = defaultScheme + "://" + *cfg.Address
-	} else {
-		agent.Config.Server = defaultScheme + "://" + *addressFlag
 	}
 
+	agent.Config.PollInterval = *pollIntervalFlag
 	if cfg.PollInterval != nil {
 		agent.Config.PollInterval = *cfg.PollInterval
-	} else {
-		pollInterval, err := time.ParseDuration(*pollIntervalFlag)
-		if err != nil {
-			log.Fatal("cant parse duration ", *pollIntervalFlag)
-		}
-		agent.Config.PollInterval = pollInterval
 	}
+
+	agent.Config.ReportInterval = *reportIntervalFlag
 	if cfg.ReportInterval != nil {
 		agent.Config.ReportInterval = *cfg.ReportInterval
-	} else {
-		reportInterval, err := time.ParseDuration(*reportIntervalFlag)
-		if err != nil {
-			log.Fatal("cant parse duration ", *reportIntervalFlag)
-		}
-
-		agent.Config.ReportInterval = reportInterval
 	}
+
+	return nil
 }
 
 func main() {
-	setAgentArgs()
+	if err := setAgentArgs(); err != nil {
+		log.Fatal(err)
+	}
 
-	jsonConfig, _ := json.Marshal(agent.Config)
-	log.Print("agent started with ", string(jsonConfig))
+	// we don't need \n as log.Printf do is automatically
+	log.Printf("agent started with %+v", agent.Config)
 
 	agent.RunAgent()
 }
