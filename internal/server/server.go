@@ -198,15 +198,15 @@ func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	w.Header().Set("Content-Type", "application/json")
 
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"Status":"Internal Server Error"}`))
-		return
-	}
-
 	if r.Header.Get("Content-Type") != "application/json" {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(`{"Status":"Bad Request"}`))
+		return
+	}
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"Status":"Internal Server Error"}`))
 		return
 	}
 
