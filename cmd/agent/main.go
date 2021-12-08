@@ -19,8 +19,8 @@ type config struct {
 const (
 	defaultAddress        = "localhost:8080"
 	defaultScheme         = "http"
-	defaultPollInterval   = "2s"
-	defaultReportInterval = "10s"
+	defaultPollInterval   = time.Second * 2
+	defaultReportInterval = time.Second * 10
 )
 
 func setAgentArgs() {
@@ -31,8 +31,8 @@ func setAgentArgs() {
 	}
 
 	addressFlag := flag.String("a", defaultAddress, "server address")
-	pollIntervalFlag := flag.String("p", defaultPollInterval, "poll interval")
-	reportIntervalFlag := flag.String("r", defaultReportInterval, "report interval")
+	pollIntervalFlag := flag.Duration("p", defaultPollInterval, "poll interval")
+	reportIntervalFlag := flag.Duration("r", defaultReportInterval, "report interval")
 
 	flag.Parse()
 
@@ -45,21 +45,12 @@ func setAgentArgs() {
 	if cfg.PollInterval != nil {
 		agent.Config.PollInterval = *cfg.PollInterval
 	} else {
-		pollInterval, err := time.ParseDuration(*pollIntervalFlag)
-		if err != nil {
-			log.Fatal("cant parse duration ", *pollIntervalFlag)
-		}
-		agent.Config.PollInterval = pollInterval
+		agent.Config.PollInterval = *pollIntervalFlag
 	}
 	if cfg.ReportInterval != nil {
 		agent.Config.ReportInterval = *cfg.ReportInterval
 	} else {
-		reportInterval, err := time.ParseDuration(*reportIntervalFlag)
-		if err != nil {
-			log.Fatal("cant parse duration ", *reportIntervalFlag)
-		}
-
-		agent.Config.ReportInterval = reportInterval
+		agent.Config.ReportInterval = *reportIntervalFlag
 	}
 }
 
