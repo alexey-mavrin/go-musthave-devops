@@ -344,11 +344,11 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	case strTypCounter:
 		stat.statType = statTypeCounter
 		stat.valueCounter = *m.Delta
-		log.Print(", delta: ", *m.Delta)
+		log.Print("delta: ", *m.Delta)
 	case strTypGauge:
 		stat.statType = statTypeGauge
 		stat.valueGauge = *m.Value
-		log.Print(", value: ", *m.Value)
+		log.Print("value: ", *m.Value)
 	default:
 		writeStatus(w, http.StatusNotImplemented, "Not Implemented", true)
 		return
