@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"log"
 	"time"
@@ -36,21 +35,19 @@ func setAgentArgs() error {
 
 	flag.Parse()
 
+	agent.Config.Server = defaultScheme + "://" + *addressFlag
 	if cfg.Address != nil {
 		agent.Config.Server = defaultScheme + "://" + *cfg.Address
-	} else {
-		agent.Config.Server = defaultScheme + "://" + *addressFlag
 	}
 
+	agent.Config.PollInterval = *pollIntervalFlag
 	if cfg.PollInterval != nil {
 		agent.Config.PollInterval = *cfg.PollInterval
-	} else {
-		agent.Config.PollInterval = *pollIntervalFlag
 	}
+
+	agent.Config.ReportInterval = *reportIntervalFlag
 	if cfg.ReportInterval != nil {
 		agent.Config.ReportInterval = *cfg.ReportInterval
-	} else {
-		agent.Config.ReportInterval = *reportIntervalFlag
 	}
 
 	return nil
@@ -61,8 +58,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	jsonConfig, _ := json.Marshal(agent.Config)
-	log.Print("agent started with ", string(jsonConfig))
+	// we don't need \n as log.Printf do is automatically
+	log.Printf("agent started with %+v", agent.Config)
 
 	agent.RunAgent()
 }
