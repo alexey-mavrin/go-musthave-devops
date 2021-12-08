@@ -23,11 +23,11 @@ const (
 	defaultReportInterval = time.Second * 10
 )
 
-func setAgentArgs() {
+func setAgentArgs() error {
 	var cfg config
 	err := env.Parse(&cfg)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	addressFlag := flag.String("a", defaultAddress, "server address")
@@ -52,10 +52,14 @@ func setAgentArgs() {
 	} else {
 		agent.Config.ReportInterval = *reportIntervalFlag
 	}
+
+	return nil
 }
 
 func main() {
-	setAgentArgs()
+	if err := setAgentArgs(); err != nil {
+		log.Fatal(err)
+	}
 
 	jsonConfig, _ := json.Marshal(agent.Config)
 	log.Print("agent started with ", string(jsonConfig))
