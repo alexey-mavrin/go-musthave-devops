@@ -253,8 +253,10 @@ func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 		writeStatus(w, http.StatusBadRequest, "Bad Request", true)
 		return
 	}
-	ret, _ := json.Marshal(m)
-	w.Write(ret)
+	if err := json.NewEncoder(w).Encode(m); err != nil {
+		writeStatus(w, http.StatusInternalServerError, "Internal Server Error", true)
+		return
+	}
 }
 
 // MetricHandler prints all available metrics
