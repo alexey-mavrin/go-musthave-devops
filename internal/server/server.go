@@ -206,7 +206,7 @@ func Handler400(w http.ResponseWriter, r *http.Request) {
 func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 	log.Print(r.Method, " ", r.URL)
 	body, err := ioutil.ReadAll(r.Body)
-	w.Header().Set("Content-Type", http.DetectContentType(body))
+	w.Header().Set("Content-Type", "application/json")
 
 	if r.Header.Get("Content-Type") != "application/json" {
 		writeStatus(w, http.StatusBadRequest, "Bad Request", false)
