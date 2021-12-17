@@ -325,7 +325,7 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	log.Print(r.Method, " ", r.URL)
 
 	body, err := ioutil.ReadAll(r.Body)
-	w.Header().Set("Content-Type", http.DetectContentType(body))
+	w.Header().Set("Content-Type", "application/json")
 
 	if err != nil {
 		writeStatus(w, http.StatusInternalServerError, "Internal Server Error", true)
