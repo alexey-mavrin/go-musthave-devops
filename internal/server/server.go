@@ -311,12 +311,7 @@ func DumpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mu.Unlock()
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		writeStatus(w, http.StatusInternalServerError, "Internal Server Error", true)
-		return
-	}
-	w.Header().Set("Content-Type", http.DetectContentType(body))
+	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(str))
 }
 
