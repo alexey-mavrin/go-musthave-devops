@@ -206,7 +206,7 @@ func Handler400(w http.ResponseWriter, r *http.Request) {
 func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 	log.Print(r.Method, " ", r.URL)
 	body, err := ioutil.ReadAll(r.Body)
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", http.DetectContentType(body))
 
 	if r.Header.Get("Content-Type") != "application/json" {
 		writeStatus(w, http.StatusBadRequest, "Bad Request", false)
@@ -311,6 +311,12 @@ func DumpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mu.Unlock()
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		writeStatus(w, http.StatusInternalServerError, "Internal Server Error", true)
+		return
+	}
+	w.Header().Set("Content-Type", http.DetectContentType(body))
 	w.Write([]byte(str))
 }
 
@@ -319,7 +325,7 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	log.Print(r.Method, " ", r.URL)
 
 	body, err := ioutil.ReadAll(r.Body)
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", http.DetectContentType(body))
 
 	if err != nil {
 		writeStatus(w, http.StatusInternalServerError, "Internal Server Error", true)
