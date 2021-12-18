@@ -92,6 +92,7 @@ func setServerArgs() error {
 	if cfg.Key != nil {
 		keyFile = *cfg.Key
 	}
+
 	if keyFile != "" {
 		keyBytes, err := ioutil.ReadFile(keyFile)
 		if err != nil {
