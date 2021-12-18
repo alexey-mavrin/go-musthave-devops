@@ -57,11 +57,13 @@ func setAgentArgs() error {
 	if cfg.Key != nil {
 		keyFile = *cfg.Key
 	}
-	keyBytes, err := ioutil.ReadFile(keyFile)
-	if err != nil {
-		return err
+	if keyFile != "" {
+		keyBytes, err := ioutil.ReadFile(keyFile)
+		if err != nil {
+			return err
+		}
+		agent.Config.Key = string(keyBytes)
 	}
-	agent.Config.Key = string(keyBytes)
 
 	return nil
 }
