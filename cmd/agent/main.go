@@ -13,6 +13,7 @@ type config struct {
 	Address        *string        `env:"ADDRESS"`
 	PollInterval   *time.Duration `env:"POLL_INTERVAL"`
 	ReportInterval *time.Duration `env:"REPORT_INTERVAL"`
+	Key            *string        `env:"KEY"`
 }
 
 const (
@@ -32,6 +33,7 @@ func setAgentArgs() error {
 	addressFlag := flag.String("a", defaultAddress, "server address")
 	pollIntervalFlag := flag.Duration("p", defaultPollInterval, "poll interval")
 	reportIntervalFlag := flag.Duration("r", defaultReportInterval, "report interval")
+	keyFlag := flag.String("k", "", "crypto key")
 
 	flag.Parse()
 
@@ -48,6 +50,11 @@ func setAgentArgs() error {
 	agent.Config.ReportInterval = *reportIntervalFlag
 	if cfg.ReportInterval != nil {
 		agent.Config.ReportInterval = *cfg.ReportInterval
+	}
+
+	agent.Config.Key = *keyFlag
+	if cfg.Key != nil {
+		agent.Config.Key = *cfg.Key
 	}
 
 	return nil

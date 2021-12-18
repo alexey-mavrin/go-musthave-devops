@@ -27,6 +27,7 @@ type serverConfig struct {
 	StoreInterval time.Duration
 	StoreFile     string
 	Restore       bool
+	Key           string
 }
 
 // Config stores server configuration
@@ -202,7 +203,7 @@ func Handler400(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Bad Request"))
 }
 
-// JSONMetricHandler prints all available metrics
+// JSONMetricHandler reports required metrics
 func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 	log.Print(r.Method, " ", r.URL)
 	body, err := ioutil.ReadAll(r.Body)
@@ -230,6 +231,8 @@ func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 		writeStatus(w, http.StatusBadRequest, "Bad Request", true)
 		return
 	}
+
+	m.StoreHash(Config.Key)
 
 	log.Print("type: ", m.MType, ", id: ", m.ID)
 	mu.Lock()
@@ -336,6 +339,11 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = json.Unmarshal(body, &m)
 	if err != nil {
+		writeStatus(w, http.StatusBadRequest, "Bad Request", true)
+		return
+	}
+
+	if m.CheckHash(Config.Key) != nil {
 		writeStatus(w, http.StatusBadRequest, "Bad Request", true)
 		return
 	}

@@ -22,6 +22,7 @@ type config struct {
 	StoreInterval *time.Duration `env:"STORE_INTERVAL"`
 	StoreFile     *string        `env:"STORE_FILE"`
 	Restore       *bool          `env:"RESTORE"`
+	Key           *string        `env:"KEY"`
 }
 
 func isFlagPassed(name string) bool {
@@ -52,6 +53,7 @@ func setServerArgs() {
 	storeIntervalFlag := flag.Duration("i", defaultStoreInterval, "store interval")
 	fileFlag := flag.String("f", defaultStoreFile, "store file")
 	restoreFlag := flag.Bool("r", defaultRestore, "restore")
+	keyFlag := flag.String("k", "", "key")
 
 	flag.Parse()
 
@@ -79,6 +81,11 @@ func setServerArgs() {
 	server.Config.Restore = *restoreFlag
 	if cfg.Restore != nil {
 		server.Config.Restore = *cfg.Restore
+	}
+
+	server.Config.Key = *keyFlag
+	if cfg.Key != nil {
+		server.Config.Key = *cfg.Key
 	}
 }
 

@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -8,6 +10,8 @@ import (
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/alexey-mavrin/go-musthave-devops/internal/common"
 )
 
 type statData struct {
@@ -21,7 +25,6 @@ var myStatData statData
 
 const (
 	defaultServer = "http://localhost:8080"
-	contentType   = "text/plain"
 )
 
 const (
@@ -33,6 +36,13 @@ type agentConfig struct {
 	Server         string
 	PollInterval   time.Duration
 	ReportInterval time.Duration
+	Key            string
+	useJSON        bool
+}
+
+type stat struct {
+	url  string
+	data []byte
 }
 
 // Config holds configuration parameters for the package
@@ -40,10 +50,16 @@ var Config agentConfig = agentConfig{
 	Server:         defaultServer,
 	PollInterval:   pollInterval,
 	ReportInterval: reportInterval,
+	useJSON:        true,
 }
 
-func sendStat(statString string) {
-	resp, err := http.Post(Config.Server+statString, contentType, nil)
+func sendStat(s stat) {
+	body := bytes.NewBuffer(s.data)
+	contentType := "text/plain"
+	if Config.useJSON {
+		contentType = "application/json"
+	}
+	resp, err := http.Post(Config.Server+s.url, contentType, body)
 	if err != nil {
 		log.Print(err)
 		return
@@ -51,8 +67,42 @@ func sendStat(statString string) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Sending %s, http status %d", statString, resp.StatusCode)
+		log.Printf("Sending %s, http status %d", s.url, resp.StatusCode)
 	}
+}
+
+func makeStatGauge(name string, value float64, useJSON bool) (stat, error) {
+	var (
+		s   stat
+		err error
+	)
+	if useJSON {
+		s.url = "/update/"
+		s.data, err = makeStatJSONGauge(name, value)
+		if err != nil {
+			return s, err
+		}
+	} else {
+		s.url = makeStatStringGauge(name, value)
+	}
+	return s, nil
+}
+
+func makeStatCounter(name string, value int64, useJSON bool) (stat, error) {
+	var (
+		s   stat
+		err error
+	)
+	if useJSON {
+		s.url = "/update/"
+		s.data, err = makeStatJSONCounter(name, value)
+		if err != nil {
+			return s, err
+		}
+	} else {
+		s.url = makeStatStringCounter(name, value)
+	}
+	return s, nil
 }
 
 func makeStatStringGauge(name string, value float64) string {
@@ -61,6 +111,26 @@ func makeStatStringGauge(name string, value float64) string {
 
 func makeStatStringCounter(name string, value int64) string {
 	return fmt.Sprintf("/update/counter/%s/%d", name, value)
+}
+
+func makeStatJSONGauge(name string, value float64) ([]byte, error) {
+	var m common.Metrics = common.Metrics{
+		ID:    name,
+		MType: common.NameGauge,
+		Value: &value,
+	}
+	m.StoreHash(Config.Key)
+	return json.Marshal(m)
+}
+
+func makeStatJSONCounter(name string, delta int64) ([]byte, error) {
+	var m common.Metrics = common.Metrics{
+		ID:    name,
+		MType: common.NameCounter,
+		Delta: &delta,
+	}
+	m.StoreHash(Config.Key)
+	return json.Marshal(m)
 }
 
 func collectStats() {
@@ -85,37 +155,37 @@ func RunCollectStats() {
 
 func sendStats() {
 	myStatData.mu.Lock()
-	PollCount := makeStatStringCounter("PollCount", myStatData.PollCount)
+	PollCount, _ := makeStatCounter("PollCount", myStatData.PollCount, Config.useJSON)
 	myStatData.PollCount = 0
 
-	RandomValueGauge := makeStatStringGauge("RandomValue", float64(myStatData.RandomValue))
-	Alloc := makeStatStringGauge("Alloc", float64(myStatData.memStats.Alloc))
-	BuckHashSys := makeStatStringGauge("BuckHashSys", float64(myStatData.memStats.BuckHashSys))
-	Frees := makeStatStringGauge("Frees", float64(myStatData.memStats.Frees))
-	GCCPUFraction := makeStatStringGauge("GCCPUFraction", float64(myStatData.memStats.GCCPUFraction))
-	GCSys := makeStatStringGauge("GCSys", float64(myStatData.memStats.GCSys))
-	HeapAlloc := makeStatStringGauge("HeapAlloc", float64(myStatData.memStats.HeapAlloc))
-	HeapIdle := makeStatStringGauge("HeapIdle", float64(myStatData.memStats.HeapIdle))
-	HeapInuse := makeStatStringGauge("HeapInuse", float64(myStatData.memStats.HeapInuse))
-	HeapObjects := makeStatStringGauge("HeapObjects", float64(myStatData.memStats.HeapObjects))
-	HeapReleased := makeStatStringGauge("HeapReleased", float64(myStatData.memStats.HeapReleased))
-	HeapSys := makeStatStringGauge("HeapSys", float64(myStatData.memStats.HeapSys))
-	LastGC := makeStatStringGauge("LastGC", float64(myStatData.memStats.LastGC))
-	Lookups := makeStatStringGauge("Lookups", float64(myStatData.memStats.Lookups))
-	MCacheInuse := makeStatStringGauge("MCacheInuse", float64(myStatData.memStats.MCacheInuse))
-	MCacheSys := makeStatStringGauge("MCacheSys", float64(myStatData.memStats.MCacheSys))
-	MSpanInuse := makeStatStringGauge("MSpanInuse", float64(myStatData.memStats.MSpanInuse))
-	MSpanSys := makeStatStringGauge("MSpanSys", float64(myStatData.memStats.MSpanSys))
-	Mallocs := makeStatStringGauge("Mallocs", float64(myStatData.memStats.Mallocs))
-	NextGC := makeStatStringGauge("NextGC", float64(myStatData.memStats.NextGC))
-	NumForcedGC := makeStatStringGauge("NumForcedGC", float64(myStatData.memStats.NumForcedGC))
-	NumGC := makeStatStringGauge("NumGC", float64(myStatData.memStats.NumGC))
-	OtherSys := makeStatStringGauge("OtherSys", float64(myStatData.memStats.OtherSys))
-	PauseTotalNs := makeStatStringGauge("PauseTotalNs", float64(myStatData.memStats.PauseTotalNs))
-	StackInuse := makeStatStringGauge("StackInuse", float64(myStatData.memStats.StackInuse))
-	StackSys := makeStatStringGauge("StackSys", float64(myStatData.memStats.StackSys))
-	TotalAlloc := makeStatStringGauge("TotalAlloc", float64(myStatData.memStats.TotalAlloc))
-	Sys := makeStatStringGauge("Sys", float64(myStatData.memStats.Sys))
+	RandomValueGauge, _ := makeStatGauge("RandomValue", float64(myStatData.RandomValue), Config.useJSON)
+	Alloc, _ := makeStatGauge("Alloc", float64(myStatData.memStats.Alloc), Config.useJSON)
+	BuckHashSys, _ := makeStatGauge("BuckHashSys", float64(myStatData.memStats.BuckHashSys), Config.useJSON)
+	Frees, _ := makeStatGauge("Frees", float64(myStatData.memStats.Frees), Config.useJSON)
+	GCCPUFraction, _ := makeStatGauge("GCCPUFraction", float64(myStatData.memStats.GCCPUFraction), Config.useJSON)
+	GCSys, _ := makeStatGauge("GCSys", float64(myStatData.memStats.GCSys), Config.useJSON)
+	HeapAlloc, _ := makeStatGauge("HeapAlloc", float64(myStatData.memStats.HeapAlloc), Config.useJSON)
+	HeapIdle, _ := makeStatGauge("HeapIdle", float64(myStatData.memStats.HeapIdle), Config.useJSON)
+	HeapInuse, _ := makeStatGauge("HeapInuse", float64(myStatData.memStats.HeapInuse), Config.useJSON)
+	HeapObjects, _ := makeStatGauge("HeapObjects", float64(myStatData.memStats.HeapObjects), Config.useJSON)
+	HeapReleased, _ := makeStatGauge("HeapReleased", float64(myStatData.memStats.HeapReleased), Config.useJSON)
+	HeapSys, _ := makeStatGauge("HeapSys", float64(myStatData.memStats.HeapSys), Config.useJSON)
+	LastGC, _ := makeStatGauge("LastGC", float64(myStatData.memStats.LastGC), Config.useJSON)
+	Lookups, _ := makeStatGauge("Lookups", float64(myStatData.memStats.Lookups), Config.useJSON)
+	MCacheInuse, _ := makeStatGauge("MCacheInuse", float64(myStatData.memStats.MCacheInuse), Config.useJSON)
+	MCacheSys, _ := makeStatGauge("MCacheSys", float64(myStatData.memStats.MCacheSys), Config.useJSON)
+	MSpanInuse, _ := makeStatGauge("MSpanInuse", float64(myStatData.memStats.MSpanInuse), Config.useJSON)
+	MSpanSys, _ := makeStatGauge("MSpanSys", float64(myStatData.memStats.MSpanSys), Config.useJSON)
+	Mallocs, _ := makeStatGauge("Mallocs", float64(myStatData.memStats.Mallocs), Config.useJSON)
+	NextGC, _ := makeStatGauge("NextGC", float64(myStatData.memStats.NextGC), Config.useJSON)
+	NumForcedGC, _ := makeStatGauge("NumForcedGC", float64(myStatData.memStats.NumForcedGC), Config.useJSON)
+	NumGC, _ := makeStatGauge("NumGC", float64(myStatData.memStats.NumGC), Config.useJSON)
+	OtherSys, _ := makeStatGauge("OtherSys", float64(myStatData.memStats.OtherSys), Config.useJSON)
+	PauseTotalNs, _ := makeStatGauge("PauseTotalNs", float64(myStatData.memStats.PauseTotalNs), Config.useJSON)
+	StackInuse, _ := makeStatGauge("StackInuse", float64(myStatData.memStats.StackInuse), Config.useJSON)
+	StackSys, _ := makeStatGauge("StackSys", float64(myStatData.memStats.StackSys), Config.useJSON)
+	TotalAlloc, _ := makeStatGauge("TotalAlloc", float64(myStatData.memStats.TotalAlloc), Config.useJSON)
+	Sys, _ := makeStatGauge("Sys", float64(myStatData.memStats.Sys), Config.useJSON)
 	myStatData.mu.Unlock()
 
 	sendStat(PollCount)
