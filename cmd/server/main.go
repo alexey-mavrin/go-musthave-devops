@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"io/ioutil"
 	"log"
 	"os"
 	"time"
@@ -35,11 +36,11 @@ func isFlagPassed(name string) bool {
 	return found
 }
 
-func setServerArgs() {
+func setServerArgs() error {
 	var cfg config
 	err := env.Parse(&cfg)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// distinguish between unset and set to ""
@@ -85,12 +86,26 @@ func setServerArgs() {
 
 	server.Config.Key = *keyFlag
 	if cfg.Key != nil {
-		server.Config.Key = *cfg.Key
 	}
+
+	keyFile := *keyFlag
+	if cfg.Key != nil {
+		keyFile = *cfg.Key
+	}
+	keyBytes, err := ioutil.ReadFile(keyFile)
+	if err != nil {
+		return err
+	}
+	server.Config.Key = string(keyBytes)
+
+	return nil
 }
 
 func main() {
-	setServerArgs()
+	err := setServerArgs()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	log.Printf("server started with %+v", server.Config)
 
