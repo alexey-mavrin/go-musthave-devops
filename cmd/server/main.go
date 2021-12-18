@@ -84,10 +84,6 @@ func setServerArgs() error {
 		server.Config.Restore = *cfg.Restore
 	}
 
-	server.Config.Key = *keyFlag
-	if cfg.Key != nil {
-	}
-
 	keyFile := *keyFlag
 	if cfg.Key != nil {
 		keyFile = *cfg.Key
