@@ -269,6 +269,7 @@ func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 		writeStatus(w, http.StatusInternalServerError, "Internal Server Error", true)
 		return
 	}
+	log.Printf("answer: %+v", m)
 }
 
 // MetricHandler prints all available metrics
