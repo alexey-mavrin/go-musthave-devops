@@ -55,7 +55,7 @@ func (m *Metrics) StoreHash(key string) error {
 	}
 	h, err := m.ComputeHash(key)
 	if err != nil {
-		return nil
+		return err
 	}
 	m.Hash = hex.EncodeToString(h[:])
 	return nil
