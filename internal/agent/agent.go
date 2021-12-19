@@ -114,7 +114,7 @@ func makeStatStringCounter(name string, value int64) string {
 }
 
 func makeStatJSONGauge(name string, value float64) ([]byte, error) {
-	var m common.Metrics = common.Metrics{
+	var m = common.Metrics{
 		ID:    name,
 		MType: common.NameGauge,
 		Value: &value,
@@ -124,7 +124,7 @@ func makeStatJSONGauge(name string, value float64) ([]byte, error) {
 }
 
 func makeStatJSONCounter(name string, delta int64) ([]byte, error) {
-	var m common.Metrics = common.Metrics{
+	var m = common.Metrics{
 		ID:    name,
 		MType: common.NameCounter,
 		Delta: &delta,
