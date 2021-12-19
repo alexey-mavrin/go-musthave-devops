@@ -353,6 +353,8 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("%+v", m)
+
 	if err = m.CheckHash(Config.Key); err != nil {
 		log.Print(err)
 		writeStatus(w, http.StatusBadRequest, "Bad Request", true)
