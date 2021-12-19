@@ -15,7 +15,7 @@ func connectDB() error {
 	var err error
 	conn, err = pgx.Connect(context.Background(), Config.DatabaseDSN)
 	if err != nil {
-		return fmt.Errorf("Unable to connect to database: %v", err)
+		return fmt.Errorf("unable to connect to database: %v", err)
 	}
 	return nil
 }

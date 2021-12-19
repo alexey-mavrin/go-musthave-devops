@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"os"
@@ -60,7 +61,7 @@ func setServerArgs() {
 	flag.Parse()
 
 	log.Printf("server is invoked with ENV %+v", cfg)
-	log.Printf("server is invoked with flags address %v store interval %v store file %v restore %v", *addressFlag, *storeIntervalFlag, *fileFlag, *restoreFlag)
+	log.Printf("server is invoked with flags address %v store interval %v store file %v restore %v database %v", *addressFlag, *storeIntervalFlag, *fileFlag, *restoreFlag, *dbFlag)
 
 	server.Config.Address = *addressFlag
 	if cfg.Address != nil {
@@ -99,7 +100,8 @@ func setServerArgs() {
 func main() {
 	setServerArgs()
 
-	log.Printf("server started with %+v", server.Config)
+	prettyConfig, _ := json.Marshal(server.Config)
+	log.Printf("server started with %v", string(prettyConfig))
 
 	server.StartServer()
 }
