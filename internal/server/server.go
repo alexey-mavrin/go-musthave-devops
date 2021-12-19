@@ -232,8 +232,6 @@ func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m.StoreHash(Config.Key)
-
 	log.Print("type: ", m.MType, ", id: ", m.ID)
 	mu.Lock()
 	defer mu.Unlock()
@@ -246,6 +244,11 @@ func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		m.Delta = &val
+		err = m.StoreHash(Config.Key)
+		if err != nil {
+			writeStatus(w, http.StatusInternalServerError, "Internal Server Error", true)
+			return
+		}
 	case strTypGauge:
 		val, ok := statistics.Gauges[m.ID]
 		if !ok {
@@ -253,6 +256,11 @@ func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		m.Value = &val
+		err = m.StoreHash(Config.Key)
+		if err != nil {
+			writeStatus(w, http.StatusInternalServerError, "Internal Server Error", true)
+			return
+		}
 	default:
 		writeStatus(w, http.StatusBadRequest, "Bad Request", true)
 		return
