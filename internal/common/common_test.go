@@ -111,7 +111,7 @@ func TestMetrics_StoreHash(t *testing.T) {
 				Delta: &testInt,
 			},
 			args:    args{key: "abcdef"},
-			wantRes: `4dfa5caf0f7bce10f304ded32e9a680341c87bbd8de913966c3f31cf85cd47cb`,
+			wantRes: `dce08d478091ced02919c91029b1aaf0d55d44c348f1099684d75b9033032114`,
 		},
 		{
 			name: "gauge",
@@ -121,7 +121,7 @@ func TestMetrics_StoreHash(t *testing.T) {
 				Value: &testFloat,
 			},
 			args:    args{key: "abcdef"},
-			wantRes: `8d81fbfecf9f7efe52d8bd783e005cb90e4f139c8f5d28e2e6b095d18c2645e2`,
+			wantRes: `af54a8b01e14ae89834b040ddc5177eec57b19a1c67a920e8ac6956f2346d579`,
 		},
 	}
 	for _, tt := range tests {
@@ -137,6 +137,50 @@ func TestMetrics_StoreHash(t *testing.T) {
 				t.Errorf("Metrics.StoreHash() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			assert.Equal(t, tt.wantRes, m.Hash)
+		})
+	}
+}
+
+func TestMetrics_CheckHash(t *testing.T) {
+	type fields struct {
+		ID    string
+		MType string
+		Delta *int64
+		Value *float64
+		Hash  string
+	}
+	type args struct {
+		key string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "check hash produced",
+			fields: fields{
+				ID:    "x",
+				MType: "counter",
+				Delta: &testInt,
+			},
+			args: args{key: "12345"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := Metrics{
+				ID:    tt.fields.ID,
+				MType: tt.fields.MType,
+				Delta: tt.fields.Delta,
+				Value: tt.fields.Value,
+				Hash:  tt.fields.Hash,
+			}
+			m.StoreHash(tt.args.key)
+			if err := m.CheckHash(tt.args.key); (err != nil) != tt.wantErr {
+				t.Errorf("Metrics.CheckHash() error = %v, wantErr %v", err, tt.wantErr)
+			}
 		})
 	}
 }
