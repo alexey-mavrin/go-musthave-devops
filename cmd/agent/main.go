@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
 	"log"
 	"time"
 
@@ -53,16 +52,9 @@ func setAgentArgs() error {
 		agent.Config.ReportInterval = *cfg.ReportInterval
 	}
 
-	keyFile := *keyFlag
+	agent.Config.Key = *keyFlag
 	if cfg.Key != nil {
-		keyFile = *cfg.Key
-	}
-	if keyFile != "" {
-		keyBytes, err := ioutil.ReadFile(keyFile)
-		if err != nil {
-			return err
-		}
-		agent.Config.Key = string(keyBytes)
+		agent.Config.Key = *cfg.Key
 	}
 
 	return nil
