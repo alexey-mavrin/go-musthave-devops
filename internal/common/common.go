@@ -68,7 +68,7 @@ func (m Metrics) CheckHash(key string) error {
 	}
 	h, err := m.ComputeHash(key)
 	if err != nil {
-		return nil
+		return err
 	}
 	hashStr := hex.EncodeToString(h[:])
 	if m.Hash != hashStr {
