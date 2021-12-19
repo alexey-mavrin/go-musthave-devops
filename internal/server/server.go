@@ -331,27 +331,30 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	log.Print(r.Method, " ", r.URL)
 
 	body, err := ioutil.ReadAll(r.Body)
-	w.Header().Set("Content-Type", "application/json")
-
 	if err != nil {
+		log.Print(err)
 		writeStatus(w, http.StatusInternalServerError, "Internal Server Error", true)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+
 	if r.Header.Get("Content-Type") != "application/json" {
+		log.Print("wrong content type")
 		writeStatus(w, http.StatusBadRequest, "Bad Request", true)
 		return
 	}
 
 	var m common.Metrics
 
-	err = json.Unmarshal(body, &m)
-	if err != nil {
+	if err = json.Unmarshal(body, &m); err != nil {
+		log.Print(err)
 		writeStatus(w, http.StatusBadRequest, "Bad Request", true)
 		return
 	}
 
-	if m.CheckHash(Config.Key) != nil {
+	if err = m.CheckHash(Config.Key); err != nil {
+		log.Print(err)
 		writeStatus(w, http.StatusBadRequest, "Bad Request", true)
 		return
 	}
@@ -373,6 +376,7 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if m.ID == "" {
+		log.Print("no id given")
 		writeStatus(w, http.StatusBadRequest, "Bad Request", true)
 		return
 	}
