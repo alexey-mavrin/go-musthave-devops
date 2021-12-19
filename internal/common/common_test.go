@@ -1,7 +1,6 @@
 package common
 
 import (
-	"crypto/sha256"
 	"reflect"
 	"testing"
 
@@ -9,10 +8,8 @@ import (
 )
 
 var (
-	testInt   int64             = 1
-	hashInt   [sha256.Size]byte = sha256.Sum256([]byte("x:counter:1abcdef"))
-	testFloat float64           = 1.1
-	hashFloat [sha256.Size]byte = sha256.Sum256([]byte("x:gauge:1.100000abcdef"))
+	testInt   int64   = 1
+	testFloat float64 = 1.1
 )
 
 func TestMetrics_ComputeHash(t *testing.T) {
@@ -30,7 +27,7 @@ func TestMetrics_ComputeHash(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    *[sha256.Size]byte
+		want    *[]byte
 		wantErr bool
 	}{
 		{
@@ -65,26 +62,6 @@ func TestMetrics_ComputeHash(t *testing.T) {
 			},
 			args:    args{key: "abcdef"},
 			wantErr: true,
-		},
-		{
-			name: "delta",
-			fields: fields{
-				ID:    "x",
-				MType: "counter",
-				Delta: &testInt,
-			},
-			args: args{key: "abcdef"},
-			want: &hashInt,
-		},
-		{
-			name: "gauge",
-			fields: fields{
-				ID:    "x",
-				MType: "gauge",
-				Value: &testFloat,
-			},
-			args: args{key: "abcdef"},
-			want: &hashFloat,
 		},
 	}
 	for _, tt := range tests {
@@ -134,7 +111,7 @@ func TestMetrics_StoreHash(t *testing.T) {
 				Delta: &testInt,
 			},
 			args:    args{key: "abcdef"},
-			wantRes: `e679eeabe6696315863ef8518c3859f860a4ba52914902078c133d1c92d20a51`,
+			wantRes: `4dfa5caf0f7bce10f304ded32e9a680341c87bbd8de913966c3f31cf85cd47cb`,
 		},
 		{
 			name: "gauge",
@@ -144,7 +121,7 @@ func TestMetrics_StoreHash(t *testing.T) {
 				Value: &testFloat,
 			},
 			args:    args{key: "abcdef"},
-			wantRes: `0463a27af714a7631fddc3bf34a75ee0b0628b03f3a0f0cf9d7eb825e6b9af7b`,
+			wantRes: `8d81fbfecf9f7efe52d8bd783e005cb90e4f139c8f5d28e2e6b095d18c2645e2`,
 		},
 	}
 	for _, tt := range tests {
