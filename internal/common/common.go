@@ -36,13 +36,13 @@ func (m Metrics) ComputeHash(key string) (*[]byte, error) {
 		if m.Value == nil {
 			return nil, fmt.Errorf("no value")
 		}
-		toHash = fmt.Sprintf("%s:gauge:%f", m.ID, *m.Value) + key
+		toHash = fmt.Sprintf("%s:gauge:%f", m.ID, *m.Value)
 	}
 	if m.MType == NameCounter {
 		if m.Delta == nil {
 			return nil, fmt.Errorf("no delta")
 		}
-		toHash = fmt.Sprintf("%s:counter:%d", m.ID, *m.Delta) + key
+		toHash = fmt.Sprintf("%s:counter:%d", m.ID, *m.Delta)
 	}
 
 	h := hmac.New(sha256.New, []byte(key))
