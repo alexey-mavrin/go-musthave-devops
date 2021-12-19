@@ -28,6 +28,7 @@ type serverConfig struct {
 	StoreFile     string
 	Restore       bool
 	Key           string
+	DatabaseDSN   string
 }
 
 // Config stores server configuration
@@ -78,6 +79,10 @@ func StartServer() {
 	if Config.StoreInterval > 0 && Config.StoreFile != "" {
 		go statSaver()
 	}
+	if err := connectDB(); err != nil {
+		log.Printf("failed to connect db: %v", err)
+	}
+
 	r := Router()
 
 	c := make(chan error)
@@ -434,6 +439,7 @@ func Router() chi.Router {
 	r := chi.NewRouter()
 	r.Use(middleware.Compress(5))
 	r.Get("/", DumpHandler)
+	r.Get("/ping", DBPing)
 	r.Get("/value/{typ}/{name}", MetricHandler)
 	r.Post("/value/", JSONMetricHandler)
 	r.Post("/update/", JSONUpdateHandler)

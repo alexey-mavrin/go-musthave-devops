@@ -23,6 +23,7 @@ type config struct {
 	StoreFile     *string        `env:"STORE_FILE"`
 	Restore       *bool          `env:"RESTORE"`
 	Key           *string        `env:"KEY"`
+	DatabaseDSN   *string        `env:"DATABASE_DSN"`
 }
 
 func isFlagPassed(name string) bool {
@@ -54,6 +55,7 @@ func setServerArgs() {
 	fileFlag := flag.String("f", defaultStoreFile, "store file")
 	restoreFlag := flag.Bool("r", defaultRestore, "restore")
 	keyFlag := flag.String("k", "", "key")
+	dbFlag := flag.String("d", "", "database dsn")
 
 	flag.Parse()
 
@@ -86,6 +88,11 @@ func setServerArgs() {
 	server.Config.Key = *keyFlag
 	if cfg.Key != nil {
 		server.Config.Key = *cfg.Key
+	}
+
+	server.Config.DatabaseDSN = *dbFlag
+	if cfg.DatabaseDSN != nil {
+		server.Config.DatabaseDSN = *cfg.DatabaseDSN
 	}
 }
 
