@@ -115,6 +115,9 @@ func StartServer() {
 	storeStats()
 	mu.Unlock()
 
+	if db != nil {
+		db.Close()
+	}
 }
 
 func statSaver() {

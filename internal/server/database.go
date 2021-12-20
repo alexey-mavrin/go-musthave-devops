@@ -5,15 +5,18 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
-	"github.com/jackc/pgx/v4"
+	"database/sql"
+	// use as a sql driver
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
-var conn *pgx.Conn
+var db *sql.DB
 
 func connectDB() error {
 	var err error
-	conn, err = pgx.Connect(context.Background(), Config.DatabaseDSN)
+	db, err = sql.Open("pgx", Config.DatabaseDSN)
 	if err != nil {
 		return fmt.Errorf("unable to connect to database: %v", err)
 	}
@@ -22,17 +25,17 @@ func connectDB() error {
 
 // DBPing tests if DB connection is working
 func DBPing(w http.ResponseWriter, r *http.Request) {
-	var resp string
-	if conn == nil {
+	if db == nil {
 		log.Printf("database is not connected")
 		writeStatus(w, http.StatusInternalServerError, "Internal Server Error", false)
 		return
 	}
-	err := conn.QueryRow(context.Background(), "select '1'").Scan(&resp)
-	if err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	if err := db.PingContext(ctx); err != nil {
 		writeStatus(w, http.StatusInternalServerError, "Internal Server Error", false)
 		return
 	}
-	writeStatus(w, http.StatusOK, "OK", false)
 
+	writeStatus(w, http.StatusOK, "OK", false)
 }
