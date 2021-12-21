@@ -23,6 +23,44 @@ func connectDB() error {
 	return nil
 }
 
+func initDBTable() error {
+	_, err := db.Query("CREATE TABLE IF NOT EXISTS gauges (id serial PRIMARY KEY, name VARCHAR (128) UNIQUE NOT NULL, value DOUBLE PRECISION NOT NULL)")
+	if err != nil {
+		return err
+	}
+	_, err = db.Query("CREATE TABLE IF NOT EXISTS counters (id serial PRIMARY KEY, name VARCHAR (128) UNIQUE NOT NULL, value BIGINT NOT NULL)")
+	return err
+}
+
+func storeStatsDB() error {
+	_, err := db.Query("DELETE FROM counters")
+	if err != nil {
+		return err
+	}
+	_, err = db.Query("DELETE FROM gauges")
+	if err != nil {
+		return err
+	}
+	for k, v := range statistics.Gauges {
+		_, err = db.Query("INSERT INTO gauges (name, value) VALUES ($1, $2)", k, v)
+		log.Print("storing", k)
+		if err != nil {
+			return err
+		}
+	}
+	for k, v := range statistics.Counters {
+		_, err = db.Query("INSERT INTO counters (name, value) VALUES ($1, $2)", k, v)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func loadStatsDB() error {
+	return nil
+}
+
 // DBPing tests if DB connection is working
 func DBPing(w http.ResponseWriter, r *http.Request) {
 	if db == nil {

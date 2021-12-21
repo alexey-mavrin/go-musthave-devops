@@ -103,5 +103,8 @@ func main() {
 	prettyConfig, _ := json.Marshal(server.Config)
 	log.Printf("server started with %v", string(prettyConfig))
 
-	server.StartServer()
+	err := server.StartServer()
+	if err != nil {
+		log.Fatal(err)
+	}
 }

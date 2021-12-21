@@ -71,9 +71,19 @@ func init() {
 }
 
 // StartServer starts server
-func StartServer() {
-	if Config.Restore && Config.StoreFile != "" {
-		loadStats()
+func StartServer() error {
+	if Config.Restore {
+		if Config.DatabaseDSN != "" {
+			if err := loadStatsDB(); err != nil {
+				log.Print(err)
+				return err
+			}
+		} else if Config.StoreFile != "" {
+			if err := loadStats(); err != nil {
+				log.Print(err)
+				return err
+			}
+		}
 	}
 
 	if Config.StoreInterval > 0 && Config.StoreFile != "" {
@@ -81,6 +91,11 @@ func StartServer() {
 	}
 	if err := connectDB(); err != nil {
 		log.Printf("failed to connect db: %v", err)
+		return err
+	}
+	if err := initDBTable(); err != nil {
+		log.Printf("failed to init db tables: %v", err)
+		return err
 	}
 
 	r := Router()
@@ -107,17 +122,29 @@ func StartServer() {
 			log.Print("sigquit")
 		}
 	case err := <-c:
-		log.Fatal(err)
+		log.Print(err)
+		return err
 	}
 
 	mu.Lock()
 	log.Print("server finished, storing stats")
-	storeStats()
+	if Config.DatabaseDSN != "" {
+		if err := storeStatsDB(); err != nil {
+			log.Print(err)
+			return err
+		}
+	} else {
+		if err := storeStats(); err != nil {
+			log.Print(err)
+			return err
+		}
+	}
 	mu.Unlock()
 
 	if db != nil {
 		db.Close()
 	}
+	return nil
 }
 
 func statSaver() {
@@ -131,21 +158,24 @@ func statSaver() {
 
 }
 
-func storeStats() {
+func storeStats() error {
 	flags := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 
 	f, err := os.OpenFile(Config.StoreFile, flags, 0644)
 	if err != nil {
-		log.Fatal("cannot open file for writing: ", err)
+		log.Print("cannot open file for writing: ", err)
+		return err
 	}
 	defer f.Close()
 
 	if err := json.NewEncoder(f).Encode(statistics); err != nil {
-		log.Fatal("cannot encode statistics: ", err)
+		log.Print("cannot encode statistics: ", err)
+		return err
 	}
+	return nil
 }
 
-func loadStats() {
+func loadStats() error {
 	flags := os.O_RDONLY
 	mu.Lock()
 	defer mu.Unlock()
@@ -153,13 +183,15 @@ func loadStats() {
 	f, err := os.OpenFile(Config.StoreFile, flags, 0)
 	if err != nil {
 		log.Print("cannot open file for reading ", err)
-		return
+		return err
 	}
 	defer f.Close()
 
 	if err := json.NewDecoder(f).Decode(&statistics); err != nil {
-		log.Fatal("cannot decode statistics ", err)
+		log.Print("cannot decode statistics ", err)
+		return err
 	}
+	return nil
 }
 
 func parseReq(r *http.Request) (statReq, error) {
@@ -416,13 +448,17 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updateStatStorage(stat)
+	if err := updateStatStorage(stat); err != nil {
+		writeStatus(w, http.StatusInternalServerError, "Internal Server Error", true)
+		return
+	}
 
 	writeStatus(w, http.StatusOK, "OK", true)
 }
 
-func updateStatStorage(stat statReq) {
+func updateStatStorage(stat statReq) error {
 	mu.Lock()
+	defer mu.Unlock()
 	switch stat.statType {
 	case statTypeCounter:
 		statistics.Counters[stat.name] += stat.valueCounter
@@ -430,11 +466,19 @@ func updateStatStorage(stat statReq) {
 		statistics.Gauges[stat.name] = stat.valueGauge
 	}
 
-	if Config.StoreInterval == 0 && Config.StoreFile != "" {
-		storeStats()
+	if Config.StoreInterval == 0 {
+		if Config.DatabaseDSN != "" {
+			// FIXME: store one record
+			if err := storeStatsDB(); err != nil {
+				return err
+			}
+		} else if Config.StoreFile != "" {
+			if err := storeStats(); err != nil {
+				return err
+			}
+		}
 	}
-
-	mu.Unlock()
+	return nil
 }
 
 // Router return chi.Router for testing and actual work
