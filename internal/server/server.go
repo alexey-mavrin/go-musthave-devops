@@ -127,12 +127,7 @@ func StartServer() error {
 
 	mu.Lock()
 	log.Print("server finished, storing stats")
-	if Config.DatabaseDSN != "" {
-		if err := storeStatsDB(); err != nil {
-			log.Print(err)
-			return err
-		}
-	} else {
+	if Config.StoreFile != "" && Config.DatabaseDSN == "" {
 		if err := storeStats(); err != nil {
 			log.Print(err)
 			return err
@@ -151,11 +146,7 @@ func statSaver() {
 	for {
 		<-ticker.C
 		mu.Lock()
-		if Config.DatabaseDSN != "" {
-			if err := storeStatsDB(); err != nil {
-				log.Print(err)
-			}
-		} else if Config.StoreFile != "" {
+		if Config.DatabaseDSN == "" {
 			if err := storeStats(); err != nil {
 				log.Print(err)
 			}
@@ -469,15 +460,19 @@ func updateStatStorage(stat statReq) error {
 	switch stat.statType {
 	case statTypeCounter:
 		statistics.Counters[stat.name] += stat.valueCounter
-		err := storeCounterDB(stat.name, statistics.Counters[stat.name])
-		if err != nil {
-			log.Print(err)
+		if Config.DatabaseDSN != "" {
+			err := storeCounterDB(stat.name, statistics.Counters[stat.name])
+			if err != nil {
+				log.Print(err)
+			}
 		}
 	case statTypeGauge:
 		statistics.Gauges[stat.name] = stat.valueGauge
-		err := storeGaugeDB(stat.name, stat.valueGauge)
-		if err != nil {
-			log.Print(err)
+		if Config.DatabaseDSN != "" {
+			err := storeGaugeDB(stat.name, stat.valueGauge)
+			if err != nil {
+				log.Print(err)
+			}
 		}
 	}
 
