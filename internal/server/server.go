@@ -94,9 +94,11 @@ func StartServer() error {
 	if Config.StoreInterval > 0 && Config.StoreFile != "" {
 		go statSaver()
 	}
-	if err := initDBTable(); err != nil {
-		log.Printf("failed to init db tables: %v", err)
-		return err
+	if Config.DatabaseDSN != "" {
+		if err := initDBTable(); err != nil {
+			log.Printf("failed to init db tables: %v", err)
+			return err
+		}
 	}
 
 	r := Router()
