@@ -83,6 +83,7 @@ func storeGaugeDB(name string, gauge float64) error {
 	if err = rows.Err(); err != nil {
 		return err
 	}
+	log.Printf("gauge %s = %v stored in db", name, gauge)
 	return nil
 }
 
@@ -95,6 +96,7 @@ func storeCounterDB(name string, counter int64) error {
 	if err = rows.Err(); err != nil {
 		return err
 	}
+	log.Printf("counter %s = %v stored in db", name, counter)
 	return nil
 }
 
