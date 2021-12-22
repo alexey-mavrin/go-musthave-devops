@@ -74,14 +74,12 @@ func init() {
 func StartServer() error {
 	if err := connectDB(); err != nil {
 		log.Printf("failed to connect db: %v", err)
-		return err
 	}
 
 	if Config.Restore {
 		if Config.DatabaseDSN != "" {
 			if err := loadStatsDB(); err != nil {
 				log.Print(err)
-				return err
 			}
 		} else if Config.StoreFile != "" {
 			if err := loadStats(); err != nil {
@@ -96,7 +94,6 @@ func StartServer() error {
 	if Config.DatabaseDSN != "" {
 		if err := initDBTable(); err != nil {
 			log.Printf("failed to init db tables: %v", err)
-			return err
 		}
 	}
 
@@ -480,9 +477,15 @@ func updateStatStorage(stat statReq) error {
 		if Config.DatabaseDSN != "" {
 			switch stat.statType {
 			case statTypeCounter:
-				storeCounterDB(stat.name, statistics.Counters[stat.name])
+				err := storeCounterDB(stat.name, statistics.Counters[stat.name])
+				if err != nil {
+					log.Print(err)
+				}
 			case statTypeGauge:
-				storeGaugeDB(stat.name, stat.valueGauge)
+				err := storeGaugeDB(stat.name, stat.valueGauge)
+				if err != nil {
+					log.Print(err)
+				}
 			}
 		} else if Config.StoreFile != "" {
 			if err := storeStats(); err != nil {
