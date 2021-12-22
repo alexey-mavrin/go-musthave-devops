@@ -469,28 +469,21 @@ func updateStatStorage(stat statReq) error {
 	switch stat.statType {
 	case statTypeCounter:
 		statistics.Counters[stat.name] += stat.valueCounter
+		err := storeCounterDB(stat.name, statistics.Counters[stat.name])
+		if err != nil {
+			log.Print(err)
+		}
 	case statTypeGauge:
 		statistics.Gauges[stat.name] = stat.valueGauge
+		err := storeGaugeDB(stat.name, stat.valueGauge)
+		if err != nil {
+			log.Print(err)
+		}
 	}
 
-	if Config.StoreInterval == 0 {
-		if Config.DatabaseDSN != "" {
-			switch stat.statType {
-			case statTypeCounter:
-				err := storeCounterDB(stat.name, statistics.Counters[stat.name])
-				if err != nil {
-					log.Print(err)
-				}
-			case statTypeGauge:
-				err := storeGaugeDB(stat.name, stat.valueGauge)
-				if err != nil {
-					log.Print(err)
-				}
-			}
-		} else if Config.StoreFile != "" {
-			if err := storeStats(); err != nil {
-				return err
-			}
+	if Config.StoreInterval == 0 && Config.StoreFile != "" {
+		if err := storeStats(); err != nil {
+			return err
 		}
 	}
 	return nil
