@@ -24,11 +24,13 @@ func connectDB() error {
 }
 
 func initDBTable() error {
-	_, err := db.Query("CREATE TABLE IF NOT EXISTS gauges (id serial PRIMARY KEY, name VARCHAR (128) UNIQUE NOT NULL, value DOUBLE PRECISION NOT NULL)")
+	rows, err := db.Query("CREATE TABLE IF NOT EXISTS gauges (id serial PRIMARY KEY, name VARCHAR (128) UNIQUE NOT NULL, value DOUBLE PRECISION NOT NULL)")
+	rows.Close()
 	if err != nil {
 		return err
 	}
-	_, err = db.Query("CREATE TABLE IF NOT EXISTS counters (id serial PRIMARY KEY, name VARCHAR (128) UNIQUE NOT NULL, value BIGINT NOT NULL)")
+	rows, err = db.Query("CREATE TABLE IF NOT EXISTS counters (id serial PRIMARY KEY, name VARCHAR (128) UNIQUE NOT NULL, value BIGINT NOT NULL)")
+	rows.Close()
 	return err
 }
 
@@ -42,14 +44,13 @@ func storeStatsDB() error {
 		return err
 	}
 	for k, v := range statistics.Gauges {
-		_, err = db.Query("INSERT INTO gauges (name, value) VALUES ($1, $2)", k, v)
-		log.Print("storing", k)
+		err = storeGaugeDB(k, v)
 		if err != nil {
 			return err
 		}
 	}
 	for k, v := range statistics.Counters {
-		_, err = db.Query("INSERT INTO counters (name, value) VALUES ($1, $2)", k, v)
+		err = storeCounterDB(k, v)
 		if err != nil {
 			return err
 		}
@@ -57,7 +58,46 @@ func storeStatsDB() error {
 	return nil
 }
 
+func storeGaugeDB(name string, gauge float64) error {
+	rows, err := db.Query("INSERT INTO gauges (name, value) VALUES ($1, $2) ON CONFLICT(name) DO UPDATE set value = $2", name, gauge)
+	rows.Close()
+	return err
+}
+
+func storeCounterDB(name string, counter int64) error {
+	rows, err := db.Query("INSERT INTO counters (name, value) VALUES ($1, $2) ON CONFLICT(name) DO UPDATE SET value = $2", name, counter)
+	rows.Close()
+	return err
+}
+
 func loadStatsDB() error {
+	var name string
+	var gauge float64
+	var counter int64
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	gRows, err := db.Query("SELECT name, value FROM gauges")
+	defer gRows.Close()
+	for gRows.Next() {
+		if err = gRows.Scan(&name, &gauge); err != nil {
+			log.Print(err)
+			return err
+		}
+		statistics.Gauges[name] = gauge
+	}
+
+	cRows, err := db.Query("SELECT name, value FROM counters")
+	defer cRows.Close()
+	for cRows.Next() {
+		if err = cRows.Scan(&name, &counter); err != nil {
+			log.Print(err)
+			return err
+		}
+		statistics.Counters[name] = counter
+	}
+
 	return nil
 }
 

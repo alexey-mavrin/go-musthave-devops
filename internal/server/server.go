@@ -72,6 +72,11 @@ func init() {
 
 // StartServer starts server
 func StartServer() error {
+	if err := connectDB(); err != nil {
+		log.Printf("failed to connect db: %v", err)
+		return err
+	}
+
 	if Config.Restore {
 		if Config.DatabaseDSN != "" {
 			if err := loadStatsDB(); err != nil {
@@ -88,10 +93,6 @@ func StartServer() error {
 
 	if Config.StoreInterval > 0 && Config.StoreFile != "" {
 		go statSaver()
-	}
-	if err := connectDB(); err != nil {
-		log.Printf("failed to connect db: %v", err)
-		return err
 	}
 	if err := initDBTable(); err != nil {
 		log.Printf("failed to init db tables: %v", err)
@@ -152,7 +153,15 @@ func statSaver() {
 	for {
 		<-ticker.C
 		mu.Lock()
-		storeStats()
+		if Config.DatabaseDSN != "" {
+			if err := storeStatsDB(); err != nil {
+				log.Print(err)
+			}
+		} else if Config.StoreFile != "" {
+			if err := storeStats(); err != nil {
+				log.Print(err)
+			}
+		}
 		mu.Unlock()
 	}
 
@@ -468,9 +477,11 @@ func updateStatStorage(stat statReq) error {
 
 	if Config.StoreInterval == 0 {
 		if Config.DatabaseDSN != "" {
-			// FIXME: store one record
-			if err := storeStatsDB(); err != nil {
-				return err
+			switch stat.statType {
+			case statTypeCounter:
+				storeCounterDB(stat.name, statistics.Counters[stat.name])
+			case statTypeGauge:
+				storeGaugeDB(stat.name, stat.valueGauge)
 			}
 		} else if Config.StoreFile != "" {
 			if err := storeStats(); err != nil {
