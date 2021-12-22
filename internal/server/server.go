@@ -86,7 +86,6 @@ func StartServer() error {
 		} else if Config.StoreFile != "" {
 			if err := loadStats(); err != nil {
 				log.Print(err)
-				return err
 			}
 		}
 	}

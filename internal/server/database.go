@@ -118,6 +118,9 @@ func loadStatsDB() error {
 		}
 		statistics.Gauges[name] = gauge
 	}
+	if err = gRows.Err(); err != nil {
+		return err
+	}
 
 	cRows, err := db.Query("SELECT name, value FROM counters")
 	if err != nil {
@@ -130,6 +133,9 @@ func loadStatsDB() error {
 			return err
 		}
 		statistics.Counters[name] = counter
+	}
+	if err = cRows.Err(); err != nil {
+		return err
 	}
 
 	return nil
