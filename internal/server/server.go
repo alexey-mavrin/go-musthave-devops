@@ -384,47 +384,60 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var m common.Metrics
+	var mm []common.Metrics
 
-	if err = json.Unmarshal(body, &m); err != nil {
-		log.Print(err)
-		writeStatus(w, http.StatusBadRequest, "Bad Request", true)
-		return
+	switch body[0] {
+	case '{':
+		var m common.Metrics
+		if err = json.Unmarshal(body, &m); err != nil {
+			log.Print(err)
+			writeStatus(w, http.StatusBadRequest, "Bad Request", true)
+			return
+		}
+		mm = append(mm, m)
+	case '[':
+		if err = json.Unmarshal(body, &mm); err != nil {
+			log.Print(err)
+			writeStatus(w, http.StatusBadRequest, "Bad Request", true)
+			return
+		}
 	}
 
-	log.Printf("%+v", m)
+	log.Printf("%+v", mm)
 
-	if err = m.CheckHash(Config.Key); err != nil {
-		log.Print(err)
-		writeStatus(w, http.StatusBadRequest, "Bad Request", true)
-		return
+	for _, m := range mm {
+		if err = m.CheckHash(Config.Key); err != nil {
+			log.Print(err)
+			writeStatus(w, http.StatusBadRequest, "Bad Request", true)
+			return
+		}
+
+		log.Print("type: ", m.MType, ", id: ", m.ID)
+		var stat statReq
+		switch m.MType {
+		case strTypCounter:
+			stat.statType = statTypeCounter
+			stat.valueCounter = *m.Delta
+			log.Print("delta: ", *m.Delta)
+		case strTypGauge:
+			stat.statType = statTypeGauge
+			stat.valueGauge = *m.Value
+			log.Print("value: ", *m.Value)
+		default:
+			writeStatus(w, http.StatusNotImplemented, "Not Implemented", true)
+			return
+		}
+
+		if m.ID == "" {
+			log.Print("no id given")
+			writeStatus(w, http.StatusBadRequest, "Bad Request", true)
+			return
+		}
+
+		stat.name = m.ID
+
+		updateStatStorage(stat)
 	}
-
-	log.Print("type: ", m.MType, ", id: ", m.ID)
-	var stat statReq
-	switch m.MType {
-	case strTypCounter:
-		stat.statType = statTypeCounter
-		stat.valueCounter = *m.Delta
-		log.Print("delta: ", *m.Delta)
-	case strTypGauge:
-		stat.statType = statTypeGauge
-		stat.valueGauge = *m.Value
-		log.Print("value: ", *m.Value)
-	default:
-		writeStatus(w, http.StatusNotImplemented, "Not Implemented", true)
-		return
-	}
-
-	if m.ID == "" {
-		log.Print("no id given")
-		writeStatus(w, http.StatusBadRequest, "Bad Request", true)
-		return
-	}
-
-	stat.name = m.ID
-
-	updateStatStorage(stat)
 
 	writeStatus(w, http.StatusOK, "OK", true)
 }
@@ -493,6 +506,7 @@ func Router() chi.Router {
 	r.Get("/value/{typ}/{name}", MetricHandler)
 	r.Post("/value/", JSONMetricHandler)
 	r.Post("/update/", JSONUpdateHandler)
+	r.Post("/updates/", JSONUpdateHandler)
 	r.Post("/update/{typ}/{name}/", Handler400)
 	r.Post("/update/{typ}/{name}/{rawVal}", UpdateHandler)
 	return r
