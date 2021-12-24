@@ -23,54 +23,17 @@ func connectDB() error {
 	return nil
 }
 
-func runSQLStatement(s string) error {
-	rows, err := db.Query(s)
-	if err != nil {
-		return err
-	}
-	rows.Close()
-	if err = rows.Err(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func initDBTable() error {
-	err := runSQLStatement("CREATE TABLE IF NOT EXISTS gauges (id serial PRIMARY KEY, name VARCHAR (128) UNIQUE NOT NULL, value DOUBLE PRECISION NOT NULL)")
+	_, err := db.Exec("CREATE TABLE IF NOT EXISTS gauges (id serial PRIMARY KEY, name VARCHAR (128) UNIQUE NOT NULL, value DOUBLE PRECISION NOT NULL)")
 	if err != nil {
 		return err
 	}
 
-	err = runSQLStatement("CREATE TABLE IF NOT EXISTS counters (id serial PRIMARY KEY, name VARCHAR (128) UNIQUE NOT NULL, value BIGINT NOT NULL)")
+	_, err = db.Exec("CREATE TABLE IF NOT EXISTS counters (id serial PRIMARY KEY, name VARCHAR (128) UNIQUE NOT NULL, value BIGINT NOT NULL)")
 	if err != nil {
 		return err
 	}
 
-	return nil
-}
-
-func storeStatsDB() error {
-	err := runSQLStatement("DELETE FROM counters")
-	if err != nil {
-		return err
-	}
-	err = runSQLStatement("DELETE FROM gauges")
-	if err != nil {
-		return err
-	}
-	for k, v := range statistics.Gauges {
-		err = storeGaugeDB(k, v)
-		if err != nil {
-			return err
-		}
-	}
-	for k, v := range statistics.Counters {
-		err = storeCounterDB(k, v)
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
