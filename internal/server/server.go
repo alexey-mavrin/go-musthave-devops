@@ -386,8 +386,7 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	var mm []common.Metrics
 
-	switch body[0] {
-	case '{':
+	if r.URL.String() == "/update/" {
 		var m common.Metrics
 		if err = json.Unmarshal(body, &m); err != nil {
 			log.Print(err)
@@ -395,7 +394,7 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		mm = append(mm, m)
-	case '[':
+	} else {
 		if err = json.Unmarshal(body, &mm); err != nil {
 			log.Print(err)
 			writeStatus(w, http.StatusBadRequest, "Bad Request", true)
