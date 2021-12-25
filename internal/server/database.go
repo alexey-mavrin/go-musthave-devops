@@ -38,28 +38,18 @@ func initDBTable() error {
 }
 
 func storeGaugeDB(name string, gauge float64) error {
-	rows, err := db.Query("INSERT INTO gauges (name, value) VALUES ($1, $2) ON CONFLICT(name) DO UPDATE set value = $2", name, gauge)
+	_, err := db.Exec("INSERT INTO gauges (name, value) VALUES ($1, $2) ON CONFLICT(name) DO UPDATE set value = $2", name, gauge)
 	if err != nil {
 		return err
 	}
-	rows.Close()
-	if err = rows.Err(); err != nil {
-		return err
-	}
-	// log.Printf("gauge %s = %v stored in db", name, gauge)
 	return nil
 }
 
 func storeCounterDB(name string, counter int64) error {
-	rows, err := db.Query("INSERT INTO counters (name, value) VALUES ($1, $2) ON CONFLICT(name) DO UPDATE SET value = $2", name, counter)
+	_, err := db.Exec("INSERT INTO counters (name, value) VALUES ($1, $2) ON CONFLICT(name) DO UPDATE SET value = $2", name, counter)
 	if err != nil {
 		return err
 	}
-	rows.Close()
-	if err = rows.Err(); err != nil {
-		return err
-	}
-	// log.Printf("counter %s = %v stored in db", name, counter)
 	return nil
 }
 
