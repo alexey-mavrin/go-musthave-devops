@@ -43,26 +43,6 @@ func TestMetrics_ComputeHash(t *testing.T) {
 			args:    args{key: "abcdef"},
 			wantErr: true,
 		},
-		{
-			name: "nil value",
-			fields: fields{
-				ID:    "x",
-				MType: "gauge",
-				Value: nil,
-			},
-			args:    args{key: "abcdef"},
-			wantErr: true,
-		},
-		{
-			name: "nil delta",
-			fields: fields{
-				ID:    "x",
-				MType: "counter",
-				Delta: nil,
-			},
-			args:    args{key: "abcdef"},
-			wantErr: true,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

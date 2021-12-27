@@ -43,7 +43,7 @@ func (m Metrics) ComputeHash(key string) (*[]byte, error) {
 	}
 
 	h := hmac.New(sha256.New, []byte(key))
-	metricsStr := fmt.Sprintf("%s", m)
+	metricsStr := m.String()
 	h.Write([]byte(metricsStr))
 	hash := h.Sum(nil)
 
