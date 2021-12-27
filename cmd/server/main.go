@@ -100,10 +100,14 @@ func setServerArgs() {
 func main() {
 	setServerArgs()
 
-	prettyConfig, _ := json.Marshal(server.Config)
+	prettyConfig, err := json.Marshal(server.Config)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	log.Printf("server started with %v", string(prettyConfig))
 
-	err := server.StartServer()
+	err = server.StartServer()
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -37,9 +37,9 @@ func setAgentArgs() error {
 
 	flag.Parse()
 
-	agent.Config.Server = defaultScheme + "://" + *addressFlag
+	agent.Config.ServerAddr = defaultScheme + "://" + *addressFlag
 	if cfg.Address != nil {
-		agent.Config.Server = defaultScheme + "://" + *cfg.Address
+		agent.Config.ServerAddr = defaultScheme + "://" + *cfg.Address
 	}
 
 	agent.Config.PollInterval = *pollIntervalFlag
