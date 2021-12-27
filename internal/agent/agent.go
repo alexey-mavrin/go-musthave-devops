@@ -32,7 +32,7 @@ const (
 )
 
 type agentConfig struct {
-	Server         string
+	ServerAddr     string
 	PollInterval   time.Duration
 	ReportInterval time.Duration
 	Key            string
@@ -42,7 +42,7 @@ type agentConfig struct {
 
 // Config holds configuration parameters for the package
 var Config agentConfig = agentConfig{
-	Server:         defaultServer,
+	ServerAddr:     defaultServer,
 	PollInterval:   pollInterval,
 	ReportInterval: reportInterval,
 	useBatch:       true,
@@ -68,8 +68,8 @@ func RunCollectStats() {
 	}
 }
 
-func appendBatch(mm *[]common.Metrics, name string, data interface{}) {
-	if mm == nil {
+func appendBatch(initial []common.Metrics, name string, data interface{}) []common.Metrics {
+	if initial == nil {
 		log.Print("addBatch: trying to add to nil slice")
 	}
 
@@ -82,7 +82,7 @@ func appendBatch(mm *[]common.Metrics, name string, data interface{}) {
 			Delta: &delta,
 		}
 		m.StoreHash(Config.Key)
-		*mm = append(*mm, m)
+		return append(initial, m)
 
 	case float64:
 		value := v
@@ -92,16 +92,18 @@ func appendBatch(mm *[]common.Metrics, name string, data interface{}) {
 			Value: &value,
 		}
 		m.StoreHash(Config.Key)
-		*mm = append(*mm, m)
+		return append(initial, m)
 	}
+	return initial
 }
 
 func sendBatch(mm []common.Metrics) {
 	var body bytes.Buffer
 	if err := json.NewEncoder(&body).Encode(mm); err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return
 	}
-	url := Config.Server + "/updates/"
+	url := Config.ServerAddr + "/updates/"
 	resp, err := http.Post(url, "application/json", &body)
 	if err != nil {
 		log.Print(err)
@@ -117,35 +119,35 @@ func sendBatch(mm []common.Metrics) {
 func sendStatsBatch() {
 	bm := make([]common.Metrics, 0, 100)
 	myStatData.mu.Lock()
-	appendBatch(&bm, "PollCount", myStatData.PollCount)
-	appendBatch(&bm, "RandomValue", float64(myStatData.RandomValue))
-	appendBatch(&bm, "Alloc", float64(myStatData.memStats.Alloc))
-	appendBatch(&bm, "BuckHashSys", float64(myStatData.memStats.BuckHashSys))
-	appendBatch(&bm, "Frees", float64(myStatData.memStats.Frees))
-	appendBatch(&bm, "GCCPUFraction", float64(myStatData.memStats.GCCPUFraction))
-	appendBatch(&bm, "GCSys", float64(myStatData.memStats.GCSys))
-	appendBatch(&bm, "HeapAlloc", float64(myStatData.memStats.HeapAlloc))
-	appendBatch(&bm, "HeapIdle", float64(myStatData.memStats.HeapIdle))
-	appendBatch(&bm, "HeapInuse", float64(myStatData.memStats.HeapInuse))
-	appendBatch(&bm, "HeapObjects", float64(myStatData.memStats.HeapObjects))
-	appendBatch(&bm, "HeapReleased", float64(myStatData.memStats.HeapReleased))
-	appendBatch(&bm, "HeapSys", float64(myStatData.memStats.HeapSys))
-	appendBatch(&bm, "LastGC", float64(myStatData.memStats.LastGC))
-	appendBatch(&bm, "Lookups", float64(myStatData.memStats.Lookups))
-	appendBatch(&bm, "MCacheInuse", float64(myStatData.memStats.MCacheInuse))
-	appendBatch(&bm, "MCacheSys", float64(myStatData.memStats.MCacheSys))
-	appendBatch(&bm, "MSpanInuse", float64(myStatData.memStats.MSpanInuse))
-	appendBatch(&bm, "MSpanSys", float64(myStatData.memStats.MSpanSys))
-	appendBatch(&bm, "Mallocs", float64(myStatData.memStats.Mallocs))
-	appendBatch(&bm, "NextGC", float64(myStatData.memStats.NextGC))
-	appendBatch(&bm, "NumForcedGC", float64(myStatData.memStats.NumForcedGC))
-	appendBatch(&bm, "NumGC", float64(myStatData.memStats.NumGC))
-	appendBatch(&bm, "OtherSys", float64(myStatData.memStats.OtherSys))
-	appendBatch(&bm, "PauseTotalNs", float64(myStatData.memStats.PauseTotalNs))
-	appendBatch(&bm, "StackInuse", float64(myStatData.memStats.StackInuse))
-	appendBatch(&bm, "StackSys", float64(myStatData.memStats.StackSys))
-	appendBatch(&bm, "TotalAlloc", float64(myStatData.memStats.TotalAlloc))
-	appendBatch(&bm, "Sys", float64(myStatData.memStats.Sys))
+	bm = appendBatch(bm, "PollCount", myStatData.PollCount)
+	bm = appendBatch(bm, "RandomValue", float64(myStatData.RandomValue))
+	bm = appendBatch(bm, "Alloc", float64(myStatData.memStats.Alloc))
+	bm = appendBatch(bm, "BuckHashSys", float64(myStatData.memStats.BuckHashSys))
+	bm = appendBatch(bm, "Frees", float64(myStatData.memStats.Frees))
+	bm = appendBatch(bm, "GCCPUFraction", float64(myStatData.memStats.GCCPUFraction))
+	bm = appendBatch(bm, "GCSys", float64(myStatData.memStats.GCSys))
+	bm = appendBatch(bm, "HeapAlloc", float64(myStatData.memStats.HeapAlloc))
+	bm = appendBatch(bm, "HeapIdle", float64(myStatData.memStats.HeapIdle))
+	bm = appendBatch(bm, "HeapInuse", float64(myStatData.memStats.HeapInuse))
+	bm = appendBatch(bm, "HeapObjects", float64(myStatData.memStats.HeapObjects))
+	bm = appendBatch(bm, "HeapReleased", float64(myStatData.memStats.HeapReleased))
+	bm = appendBatch(bm, "HeapSys", float64(myStatData.memStats.HeapSys))
+	bm = appendBatch(bm, "LastGC", float64(myStatData.memStats.LastGC))
+	bm = appendBatch(bm, "Lookups", float64(myStatData.memStats.Lookups))
+	bm = appendBatch(bm, "MCacheInuse", float64(myStatData.memStats.MCacheInuse))
+	bm = appendBatch(bm, "MCacheSys", float64(myStatData.memStats.MCacheSys))
+	bm = appendBatch(bm, "MSpanInuse", float64(myStatData.memStats.MSpanInuse))
+	bm = appendBatch(bm, "MSpanSys", float64(myStatData.memStats.MSpanSys))
+	bm = appendBatch(bm, "Mallocs", float64(myStatData.memStats.Mallocs))
+	bm = appendBatch(bm, "NextGC", float64(myStatData.memStats.NextGC))
+	bm = appendBatch(bm, "NumForcedGC", float64(myStatData.memStats.NumForcedGC))
+	bm = appendBatch(bm, "NumGC", float64(myStatData.memStats.NumGC))
+	bm = appendBatch(bm, "OtherSys", float64(myStatData.memStats.OtherSys))
+	bm = appendBatch(bm, "PauseTotalNs", float64(myStatData.memStats.PauseTotalNs))
+	bm = appendBatch(bm, "StackInuse", float64(myStatData.memStats.StackInuse))
+	bm = appendBatch(bm, "StackSys", float64(myStatData.memStats.StackSys))
+	bm = appendBatch(bm, "TotalAlloc", float64(myStatData.memStats.TotalAlloc))
+	bm = appendBatch(bm, "Sys", float64(myStatData.memStats.Sys))
 	myStatData.mu.Unlock()
 
 	sendBatch(bm)

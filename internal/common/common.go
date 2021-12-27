@@ -23,6 +23,16 @@ type Metrics struct {
 	Hash  string   `json:"hash,omitempty"`
 }
 
+func (m Metrics) String() string {
+	str := fmt.Sprintf("%s:%s:", m.ID, m.MType)
+	if m.Value != nil {
+		str += fmt.Sprintf("%f", *m.Value)
+	} else if m.Delta != nil {
+		str += fmt.Sprintf("%d", *m.Delta)
+	}
+	return str
+}
+
 // ComputeHash calculates hash for metrics
 func (m Metrics) ComputeHash(key string) (*[]byte, error) {
 	if key == "" {
@@ -31,22 +41,10 @@ func (m Metrics) ComputeHash(key string) (*[]byte, error) {
 	if m.ID == "" {
 		return nil, fmt.Errorf("empty ID field")
 	}
-	toHash := ""
-	if m.MType == NameGauge {
-		if m.Value == nil {
-			return nil, fmt.Errorf("no value")
-		}
-		toHash = fmt.Sprintf("%s:gauge:%f", m.ID, *m.Value)
-	}
-	if m.MType == NameCounter {
-		if m.Delta == nil {
-			return nil, fmt.Errorf("no delta")
-		}
-		toHash = fmt.Sprintf("%s:counter:%d", m.ID, *m.Delta)
-	}
 
 	h := hmac.New(sha256.New, []byte(key))
-	h.Write([]byte(toHash))
+	metricsStr := fmt.Sprintf("%s", m)
+	h.Write([]byte(metricsStr))
 	hash := h.Sum(nil)
 
 	return &hash, nil
