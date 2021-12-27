@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/alexey-mavrin/go-musthave-devops/internal/common"
 )
@@ -26,6 +27,8 @@ type serverConfig struct {
 	StoreInterval time.Duration
 	StoreFile     string
 	Restore       bool
+	Key           string
+	DatabaseDSN   string
 }
 
 // Config stores server configuration
@@ -68,14 +71,32 @@ func init() {
 }
 
 // StartServer starts server
-func StartServer() {
-	if Config.Restore && Config.StoreFile != "" {
-		loadStats()
+func StartServer() error {
+	if err := connectDB(); err != nil {
+		log.Printf("failed to connect db: %v", err)
+	}
+
+	if Config.Restore {
+		if Config.DatabaseDSN != "" {
+			if err := loadStatsDB(); err != nil {
+				log.Print(err)
+			}
+		} else if Config.StoreFile != "" {
+			if err := loadStats(); err != nil {
+				log.Print(err)
+			}
+		}
 	}
 
 	if Config.StoreInterval > 0 && Config.StoreFile != "" {
 		go statSaver()
 	}
+	if Config.DatabaseDSN != "" {
+		if err := initDBTable(); err != nil {
+			log.Printf("failed to init db tables: %v", err)
+		}
+	}
+
 	r := Router()
 
 	c := make(chan error)
@@ -100,14 +121,24 @@ func StartServer() {
 			log.Print("sigquit")
 		}
 	case err := <-c:
-		log.Fatal(err)
+		log.Print(err)
+		return err
 	}
 
 	mu.Lock()
 	log.Print("server finished, storing stats")
-	storeStats()
+	if Config.StoreFile != "" && Config.DatabaseDSN == "" {
+		if err := storeStats(); err != nil {
+			log.Print(err)
+			return err
+		}
+	}
 	mu.Unlock()
 
+	if db != nil {
+		db.Close()
+	}
+	return nil
 }
 
 func statSaver() {
@@ -115,27 +146,34 @@ func statSaver() {
 	for {
 		<-ticker.C
 		mu.Lock()
-		storeStats()
+		if Config.DatabaseDSN == "" {
+			if err := storeStats(); err != nil {
+				log.Print(err)
+			}
+		}
 		mu.Unlock()
 	}
 
 }
 
-func storeStats() {
+func storeStats() error {
 	flags := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 
 	f, err := os.OpenFile(Config.StoreFile, flags, 0644)
 	if err != nil {
-		log.Fatal("cannot open file for writing: ", err)
+		log.Print("cannot open file for writing: ", err)
+		return err
 	}
 	defer f.Close()
 
 	if err := json.NewEncoder(f).Encode(statistics); err != nil {
-		log.Fatal("cannot encode statistics: ", err)
+		log.Print("cannot encode statistics: ", err)
+		return err
 	}
+	return nil
 }
 
-func loadStats() {
+func loadStats() error {
 	flags := os.O_RDONLY
 	mu.Lock()
 	defer mu.Unlock()
@@ -143,13 +181,15 @@ func loadStats() {
 	f, err := os.OpenFile(Config.StoreFile, flags, 0)
 	if err != nil {
 		log.Print("cannot open file for reading ", err)
-		return
+		return err
 	}
 	defer f.Close()
 
 	if err := json.NewDecoder(f).Decode(&statistics); err != nil {
-		log.Fatal("cannot decode statistics ", err)
+		log.Print("cannot decode statistics ", err)
+		return err
 	}
+	return nil
 }
 
 func parseReq(r *http.Request) (statReq, error) {
@@ -201,7 +241,7 @@ func Handler400(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Bad Request"))
 }
 
-// JSONMetricHandler prints all available metrics
+// JSONMetricHandler reports required metrics
 func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 	log.Print(r.Method, " ", r.URL)
 	body, err := ioutil.ReadAll(r.Body)
@@ -242,6 +282,11 @@ func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		m.Delta = &val
+		err = m.StoreHash(Config.Key)
+		if err != nil {
+			writeStatus(w, http.StatusInternalServerError, "Internal Server Error", true)
+			return
+		}
 	case strTypGauge:
 		val, ok := statistics.Gauges[m.ID]
 		if !ok {
@@ -249,6 +294,11 @@ func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		m.Value = &val
+		err = m.StoreHash(Config.Key)
+		if err != nil {
+			writeStatus(w, http.StatusInternalServerError, "Internal Server Error", true)
+			return
+		}
 	default:
 		writeStatus(w, http.StatusBadRequest, "Bad Request", true)
 		return
@@ -257,6 +307,7 @@ func JSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 		writeStatus(w, http.StatusInternalServerError, "Internal Server Error", true)
 		return
 	}
+	log.Printf("answer: %+v", m)
 }
 
 // MetricHandler prints all available metrics
@@ -310,6 +361,7 @@ func DumpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mu.Unlock()
+	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(str))
 }
 
@@ -318,50 +370,73 @@ func JSONUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	log.Print(r.Method, " ", r.URL)
 
 	body, err := ioutil.ReadAll(r.Body)
-	w.Header().Set("Content-Type", "application/json")
-
 	if err != nil {
+		log.Print(err)
 		writeStatus(w, http.StatusInternalServerError, "Internal Server Error", true)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+
 	if r.Header.Get("Content-Type") != "application/json" {
+		log.Print("wrong content type")
 		writeStatus(w, http.StatusBadRequest, "Bad Request", true)
 		return
 	}
 
-	var m common.Metrics
+	var mm []common.Metrics
 
-	err = json.Unmarshal(body, &m)
-	if err != nil {
-		writeStatus(w, http.StatusBadRequest, "Bad Request", true)
-		return
+	if r.URL.String() == "/update/" {
+		var m common.Metrics
+		if err = json.Unmarshal(body, &m); err != nil {
+			log.Print(err)
+			writeStatus(w, http.StatusBadRequest, "Bad Request", true)
+			return
+		}
+		mm = append(mm, m)
+	} else {
+		if err = json.Unmarshal(body, &mm); err != nil {
+			log.Print(err)
+			writeStatus(w, http.StatusBadRequest, "Bad Request", true)
+			return
+		}
 	}
 
-	log.Print("type: ", m.MType, ", id: ", m.ID)
-	var stat statReq
-	switch m.MType {
-	case strTypCounter:
-		stat.statType = statTypeCounter
-		stat.valueCounter = *m.Delta
-		log.Print("delta: ", *m.Delta)
-	case strTypGauge:
-		stat.statType = statTypeGauge
-		stat.valueGauge = *m.Value
-		log.Print("value: ", *m.Value)
-	default:
-		writeStatus(w, http.StatusNotImplemented, "Not Implemented", true)
-		return
+	log.Printf("%+v", mm)
+
+	for _, m := range mm {
+		if err = m.CheckHash(Config.Key); err != nil {
+			log.Print(err)
+			writeStatus(w, http.StatusBadRequest, "Bad Request", true)
+			return
+		}
+
+		log.Print("type: ", m.MType, ", id: ", m.ID)
+		var stat statReq
+		switch m.MType {
+		case strTypCounter:
+			stat.statType = statTypeCounter
+			stat.valueCounter = *m.Delta
+			log.Print("delta: ", *m.Delta)
+		case strTypGauge:
+			stat.statType = statTypeGauge
+			stat.valueGauge = *m.Value
+			log.Print("value: ", *m.Value)
+		default:
+			writeStatus(w, http.StatusNotImplemented, "Not Implemented", true)
+			return
+		}
+
+		if m.ID == "" {
+			log.Print("no id given")
+			writeStatus(w, http.StatusBadRequest, "Bad Request", true)
+			return
+		}
+
+		stat.name = m.ID
+
+		updateStatStorage(stat)
 	}
-
-	if m.ID == "" {
-		writeStatus(w, http.StatusBadRequest, "Bad Request", true)
-		return
-	}
-
-	stat.name = m.ID
-
-	updateStatStorage(stat)
 
 	writeStatus(w, http.StatusOK, "OK", true)
 }
@@ -383,34 +458,54 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updateStatStorage(stat)
+	if err := updateStatStorage(stat); err != nil {
+		writeStatus(w, http.StatusInternalServerError, "Internal Server Error", true)
+		return
+	}
 
 	writeStatus(w, http.StatusOK, "OK", true)
 }
 
-func updateStatStorage(stat statReq) {
+func updateStatStorage(stat statReq) error {
 	mu.Lock()
+	defer mu.Unlock()
 	switch stat.statType {
 	case statTypeCounter:
 		statistics.Counters[stat.name] += stat.valueCounter
+		if Config.DatabaseDSN != "" {
+			err := storeCounterDB(stat.name, statistics.Counters[stat.name])
+			if err != nil {
+				log.Print(err)
+			}
+		}
 	case statTypeGauge:
 		statistics.Gauges[stat.name] = stat.valueGauge
+		if Config.DatabaseDSN != "" {
+			err := storeGaugeDB(stat.name, stat.valueGauge)
+			if err != nil {
+				log.Print(err)
+			}
+		}
 	}
 
 	if Config.StoreInterval == 0 && Config.StoreFile != "" {
-		storeStats()
+		if err := storeStats(); err != nil {
+			return err
+		}
 	}
-
-	mu.Unlock()
+	return nil
 }
 
 // Router return chi.Router for testing and actual work
 func Router() chi.Router {
 	r := chi.NewRouter()
+	r.Use(middleware.Compress(5))
 	r.Get("/", DumpHandler)
+	r.Get("/ping", DBPing)
 	r.Get("/value/{typ}/{name}", MetricHandler)
 	r.Post("/value/", JSONMetricHandler)
 	r.Post("/update/", JSONUpdateHandler)
+	r.Post("/updates/", JSONUpdateHandler)
 	r.Post("/update/{typ}/{name}/", Handler400)
 	r.Post("/update/{typ}/{name}/{rawVal}", UpdateHandler)
 	return r

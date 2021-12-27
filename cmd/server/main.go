@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"os"
@@ -22,6 +23,8 @@ type config struct {
 	StoreInterval *time.Duration `env:"STORE_INTERVAL"`
 	StoreFile     *string        `env:"STORE_FILE"`
 	Restore       *bool          `env:"RESTORE"`
+	Key           *string        `env:"KEY"`
+	DatabaseDSN   *string        `env:"DATABASE_DSN"`
 }
 
 func isFlagPassed(name string) bool {
@@ -52,11 +55,13 @@ func setServerArgs() {
 	storeIntervalFlag := flag.Duration("i", defaultStoreInterval, "store interval")
 	fileFlag := flag.String("f", defaultStoreFile, "store file")
 	restoreFlag := flag.Bool("r", defaultRestore, "restore")
+	keyFlag := flag.String("k", "", "key")
+	dbFlag := flag.String("d", "", "database dsn")
 
 	flag.Parse()
 
 	log.Printf("server is invoked with ENV %+v", cfg)
-	log.Printf("server is invoked with flags address %v store interval %v store file %v restore %v", *addressFlag, *storeIntervalFlag, *fileFlag, *restoreFlag)
+	log.Printf("server is invoked with flags address %v store interval %v store file %v restore %v database %v", *addressFlag, *storeIntervalFlag, *fileFlag, *restoreFlag, *dbFlag)
 
 	server.Config.Address = *addressFlag
 	if cfg.Address != nil {
@@ -80,12 +85,26 @@ func setServerArgs() {
 	if cfg.Restore != nil {
 		server.Config.Restore = *cfg.Restore
 	}
+
+	server.Config.Key = *keyFlag
+	if cfg.Key != nil {
+		server.Config.Key = *cfg.Key
+	}
+
+	server.Config.DatabaseDSN = *dbFlag
+	if cfg.DatabaseDSN != nil {
+		server.Config.DatabaseDSN = *cfg.DatabaseDSN
+	}
 }
 
 func main() {
 	setServerArgs()
 
-	log.Printf("server started with %+v", server.Config)
+	prettyConfig, _ := json.Marshal(server.Config)
+	log.Printf("server started with %v", string(prettyConfig))
 
-	server.StartServer()
+	err := server.StartServer()
+	if err != nil {
+		log.Fatal(err)
+	}
 }

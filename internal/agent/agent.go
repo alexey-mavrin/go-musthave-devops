@@ -1,13 +1,16 @@
 package agent
 
 import (
-	"fmt"
+	"bytes"
+	"encoding/json"
 	"log"
 	"math/rand"
 	"net/http"
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/alexey-mavrin/go-musthave-devops/internal/common"
 )
 
 type statData struct {
@@ -21,7 +24,6 @@ var myStatData statData
 
 const (
 	defaultServer = "http://localhost:8080"
-	contentType   = "text/plain"
 )
 
 const (
@@ -33,6 +35,9 @@ type agentConfig struct {
 	Server         string
 	PollInterval   time.Duration
 	ReportInterval time.Duration
+	Key            string
+	useJSON        bool
+	useBatch       bool
 }
 
 // Config holds configuration parameters for the package
@@ -40,27 +45,7 @@ var Config agentConfig = agentConfig{
 	Server:         defaultServer,
 	PollInterval:   pollInterval,
 	ReportInterval: reportInterval,
-}
-
-func sendStat(statString string) {
-	resp, err := http.Post(Config.Server+statString, contentType, nil)
-	if err != nil {
-		log.Print(err)
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("Sending %s, http status %d", statString, resp.StatusCode)
-	}
-}
-
-func makeStatStringGauge(name string, value float64) string {
-	return fmt.Sprintf("/update/gauge/%s/%G", name, value)
-}
-
-func makeStatStringCounter(name string, value int64) string {
-	return fmt.Sprintf("/update/counter/%s/%d", name, value)
+	useBatch:       true,
 }
 
 func collectStats() {
@@ -83,70 +68,87 @@ func RunCollectStats() {
 	}
 }
 
-func sendStats() {
-	myStatData.mu.Lock()
-	PollCount := makeStatStringCounter("PollCount", myStatData.PollCount)
-	myStatData.PollCount = 0
+func appendBatch(mm *[]common.Metrics, name string, data interface{}) {
+	if mm == nil {
+		log.Print("addBatch: trying to add to nil slice")
+	}
 
-	RandomValueGauge := makeStatStringGauge("RandomValue", float64(myStatData.RandomValue))
-	Alloc := makeStatStringGauge("Alloc", float64(myStatData.memStats.Alloc))
-	BuckHashSys := makeStatStringGauge("BuckHashSys", float64(myStatData.memStats.BuckHashSys))
-	Frees := makeStatStringGauge("Frees", float64(myStatData.memStats.Frees))
-	GCCPUFraction := makeStatStringGauge("GCCPUFraction", float64(myStatData.memStats.GCCPUFraction))
-	GCSys := makeStatStringGauge("GCSys", float64(myStatData.memStats.GCSys))
-	HeapAlloc := makeStatStringGauge("HeapAlloc", float64(myStatData.memStats.HeapAlloc))
-	HeapIdle := makeStatStringGauge("HeapIdle", float64(myStatData.memStats.HeapIdle))
-	HeapInuse := makeStatStringGauge("HeapInuse", float64(myStatData.memStats.HeapInuse))
-	HeapObjects := makeStatStringGauge("HeapObjects", float64(myStatData.memStats.HeapObjects))
-	HeapReleased := makeStatStringGauge("HeapReleased", float64(myStatData.memStats.HeapReleased))
-	HeapSys := makeStatStringGauge("HeapSys", float64(myStatData.memStats.HeapSys))
-	LastGC := makeStatStringGauge("LastGC", float64(myStatData.memStats.LastGC))
-	Lookups := makeStatStringGauge("Lookups", float64(myStatData.memStats.Lookups))
-	MCacheInuse := makeStatStringGauge("MCacheInuse", float64(myStatData.memStats.MCacheInuse))
-	MCacheSys := makeStatStringGauge("MCacheSys", float64(myStatData.memStats.MCacheSys))
-	MSpanInuse := makeStatStringGauge("MSpanInuse", float64(myStatData.memStats.MSpanInuse))
-	MSpanSys := makeStatStringGauge("MSpanSys", float64(myStatData.memStats.MSpanSys))
-	Mallocs := makeStatStringGauge("Mallocs", float64(myStatData.memStats.Mallocs))
-	NextGC := makeStatStringGauge("NextGC", float64(myStatData.memStats.NextGC))
-	NumForcedGC := makeStatStringGauge("NumForcedGC", float64(myStatData.memStats.NumForcedGC))
-	NumGC := makeStatStringGauge("NumGC", float64(myStatData.memStats.NumGC))
-	OtherSys := makeStatStringGauge("OtherSys", float64(myStatData.memStats.OtherSys))
-	PauseTotalNs := makeStatStringGauge("PauseTotalNs", float64(myStatData.memStats.PauseTotalNs))
-	StackInuse := makeStatStringGauge("StackInuse", float64(myStatData.memStats.StackInuse))
-	StackSys := makeStatStringGauge("StackSys", float64(myStatData.memStats.StackSys))
-	TotalAlloc := makeStatStringGauge("TotalAlloc", float64(myStatData.memStats.TotalAlloc))
-	Sys := makeStatStringGauge("Sys", float64(myStatData.memStats.Sys))
+	switch v := data.(type) {
+	case int64:
+		delta := v
+		m := common.Metrics{
+			ID:    name,
+			MType: common.NameCounter,
+			Delta: &delta,
+		}
+		m.StoreHash(Config.Key)
+		*mm = append(*mm, m)
+
+	case float64:
+		value := v
+		m := common.Metrics{
+			ID:    name,
+			MType: common.NameGauge,
+			Value: &value,
+		}
+		m.StoreHash(Config.Key)
+		*mm = append(*mm, m)
+	}
+}
+
+func sendBatch(mm []common.Metrics) {
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(mm); err != nil {
+		log.Fatal(err)
+	}
+	url := Config.Server + "/updates/"
+	resp, err := http.Post(url, "application/json", &body)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Sending %s, http status %d", url, resp.StatusCode)
+	}
+}
+
+func sendStatsBatch() {
+	bm := make([]common.Metrics, 0, 100)
+	myStatData.mu.Lock()
+	appendBatch(&bm, "PollCount", myStatData.PollCount)
+	appendBatch(&bm, "RandomValue", float64(myStatData.RandomValue))
+	appendBatch(&bm, "Alloc", float64(myStatData.memStats.Alloc))
+	appendBatch(&bm, "BuckHashSys", float64(myStatData.memStats.BuckHashSys))
+	appendBatch(&bm, "Frees", float64(myStatData.memStats.Frees))
+	appendBatch(&bm, "GCCPUFraction", float64(myStatData.memStats.GCCPUFraction))
+	appendBatch(&bm, "GCSys", float64(myStatData.memStats.GCSys))
+	appendBatch(&bm, "HeapAlloc", float64(myStatData.memStats.HeapAlloc))
+	appendBatch(&bm, "HeapIdle", float64(myStatData.memStats.HeapIdle))
+	appendBatch(&bm, "HeapInuse", float64(myStatData.memStats.HeapInuse))
+	appendBatch(&bm, "HeapObjects", float64(myStatData.memStats.HeapObjects))
+	appendBatch(&bm, "HeapReleased", float64(myStatData.memStats.HeapReleased))
+	appendBatch(&bm, "HeapSys", float64(myStatData.memStats.HeapSys))
+	appendBatch(&bm, "LastGC", float64(myStatData.memStats.LastGC))
+	appendBatch(&bm, "Lookups", float64(myStatData.memStats.Lookups))
+	appendBatch(&bm, "MCacheInuse", float64(myStatData.memStats.MCacheInuse))
+	appendBatch(&bm, "MCacheSys", float64(myStatData.memStats.MCacheSys))
+	appendBatch(&bm, "MSpanInuse", float64(myStatData.memStats.MSpanInuse))
+	appendBatch(&bm, "MSpanSys", float64(myStatData.memStats.MSpanSys))
+	appendBatch(&bm, "Mallocs", float64(myStatData.memStats.Mallocs))
+	appendBatch(&bm, "NextGC", float64(myStatData.memStats.NextGC))
+	appendBatch(&bm, "NumForcedGC", float64(myStatData.memStats.NumForcedGC))
+	appendBatch(&bm, "NumGC", float64(myStatData.memStats.NumGC))
+	appendBatch(&bm, "OtherSys", float64(myStatData.memStats.OtherSys))
+	appendBatch(&bm, "PauseTotalNs", float64(myStatData.memStats.PauseTotalNs))
+	appendBatch(&bm, "StackInuse", float64(myStatData.memStats.StackInuse))
+	appendBatch(&bm, "StackSys", float64(myStatData.memStats.StackSys))
+	appendBatch(&bm, "TotalAlloc", float64(myStatData.memStats.TotalAlloc))
+	appendBatch(&bm, "Sys", float64(myStatData.memStats.Sys))
 	myStatData.mu.Unlock()
 
-	sendStat(PollCount)
-	sendStat(RandomValueGauge)
-	sendStat(Alloc)
-	sendStat(BuckHashSys)
-	sendStat(Frees)
-	sendStat(GCCPUFraction)
-	sendStat(GCSys)
-	sendStat(HeapAlloc)
-	sendStat(HeapIdle)
-	sendStat(HeapInuse)
-	sendStat(HeapObjects)
-	sendStat(HeapReleased)
-	sendStat(HeapSys)
-	sendStat(LastGC)
-	sendStat(Lookups)
-	sendStat(MCacheInuse)
-	sendStat(MCacheSys)
-	sendStat(MSpanInuse)
-	sendStat(MSpanSys)
-	sendStat(Mallocs)
-	sendStat(NextGC)
-	sendStat(NumForcedGC)
-	sendStat(NumGC)
-	sendStat(OtherSys)
-	sendStat(PauseTotalNs)
-	sendStat(StackInuse)
-	sendStat(StackSys)
-	sendStat(TotalAlloc)
-	sendStat(Sys)
+	sendBatch(bm)
 }
 
 // RunSendStats periodically sends statistics to a collector
@@ -154,7 +156,7 @@ func RunSendStats() {
 	ticker := time.NewTicker(Config.ReportInterval)
 	for {
 		<-ticker.C
-		sendStats()
+		sendStatsBatch()
 	}
 }
 
