@@ -71,12 +71,12 @@ var Config agentConfig = agentConfig{
 func collectPSStats() {
 	m, err := mem.VirtualMemory()
 	if err != nil {
-		log.Print(err)
+		log.Println(err)
 	}
 	c, err := cpu.Times(true)
 	timeNow := time.Now()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	myStatData.mu.Lock()
 	timeDiff := timeNow.Sub(myStatData.CPUutilLastTime)
