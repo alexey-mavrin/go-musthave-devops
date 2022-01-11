@@ -3,6 +3,7 @@ package agent
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
@@ -10,14 +11,33 @@ import (
 	"sync"
 	"time"
 
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
+
 	"github.com/alexey-mavrin/go-musthave-devops/internal/common"
 )
 
 type statData struct {
-	mu          sync.Mutex
-	memStats    runtime.MemStats
-	PollCount   int64
-	RandomValue int
+	mu              sync.Mutex
+	memStats        runtime.MemStats
+	PollCount       int64
+	RandomValue     int
+	TotalMemory     float64
+	FreeMemory      float64
+	CPUtime         []float64
+	CPUutilization  []float64
+	CPUutilLastTime time.Time
+}
+
+func init() {
+	cpuStat, err := cpu.Info()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	numCPU := len(cpuStat)
+	myStatData.CPUtime = make([]float64, numCPU)
+	myStatData.CPUutilization = make([]float64, numCPU)
 }
 
 var myStatData statData
@@ -48,6 +68,31 @@ var Config agentConfig = agentConfig{
 	useBatch:       true,
 }
 
+func collectPSStats() {
+	m, err := mem.VirtualMemory()
+	if err != nil {
+		log.Println(err)
+	}
+	c, err := cpu.Times(true)
+	timeNow := time.Now()
+	if err != nil {
+		log.Println(err)
+	}
+	myStatData.mu.Lock()
+	timeDiff := timeNow.Sub(myStatData.CPUutilLastTime)
+	myStatData.CPUutilLastTime = timeNow
+	myStatData.TotalMemory = float64(m.Total)
+	myStatData.FreeMemory = float64(m.Free)
+	for n := range c {
+		newCPUTime := c[n].User + c[n].System
+		cpuUtil := (newCPUTime - myStatData.CPUtime[n]) * 1000 / float64(timeDiff.Milliseconds())
+		myStatData.CPUutilization[n] = cpuUtil
+		myStatData.CPUtime[n] = newCPUTime
+	}
+	myStatData.mu.Unlock()
+
+}
+
 func collectStats() {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
@@ -65,6 +110,15 @@ func RunCollectStats() {
 	for {
 		<-ticker.C
 		collectStats()
+	}
+}
+
+// RunCollectPSStats collects data from psutils periodically
+func RunCollectPSStats() {
+	ticker := time.NewTicker(Config.PollInterval)
+	for {
+		<-ticker.C
+		collectPSStats()
 	}
 }
 
@@ -93,6 +147,18 @@ func appendBatch(initial []common.Metrics, name string, data interface{}) []comm
 		}
 		m.StoreHash(Config.Key)
 		return append(initial, m)
+	case []float64:
+		for item := range v {
+			value := v[item]
+			m := common.Metrics{
+				ID:    fmt.Sprintf("%s%d", name, item),
+				MType: common.NameGauge,
+				Value: &value,
+			}
+			m.StoreHash(Config.Key)
+			initial = append(initial, m)
+		}
+		return initial
 	}
 	return initial
 }
@@ -148,6 +214,9 @@ func sendStatsBatch() {
 	bm = appendBatch(bm, "StackSys", float64(myStatData.memStats.StackSys))
 	bm = appendBatch(bm, "TotalAlloc", float64(myStatData.memStats.TotalAlloc))
 	bm = appendBatch(bm, "Sys", float64(myStatData.memStats.Sys))
+	bm = appendBatch(bm, "TotalMemory", myStatData.TotalMemory)
+	bm = appendBatch(bm, "FreeMemory", myStatData.FreeMemory)
+	bm = appendBatch(bm, "CPUutilization", myStatData.CPUutilization)
 	myStatData.mu.Unlock()
 
 	sendBatch(bm)
@@ -166,6 +235,7 @@ func RunSendStats() {
 func RunAgent() {
 	rand.Seed(time.Now().UnixNano())
 	go RunCollectStats()
+	go RunCollectPSStats()
 	RunSendStats()
 
 }
