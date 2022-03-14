@@ -508,5 +508,7 @@ func Router() chi.Router {
 	r.Post("/updates/", JSONUpdateHandler)
 	r.Post("/update/{typ}/{name}/", Handler400)
 	r.Post("/update/{typ}/{name}/{rawVal}", UpdateHandler)
+
+	r.Mount("/debug", middleware.Profiler())
 	return r
 }
