@@ -358,6 +358,8 @@ func DumpHandler(w http.ResponseWriter, r *http.Request) {
 	sort.Strings(gNames)
 
 	var buf = dumpPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer dumpPool.Put(buf)
 
 	for _, n := range cNames {
 		fmt.Fprintf(buf, "%s %v\n", n, statistics.Counters[n])
