@@ -3,7 +3,6 @@ package server_test
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"net/http"
 	"net/http/httptest"
 
@@ -38,7 +37,6 @@ func ExampleJSONMetricHandler() {
 	// retrieve the value.
 	server.JSONMetricHandler(res, req)
 	fmt.Println(res.Code)
-	log.Print(res)
 	// Output:
 	// 200
 }
