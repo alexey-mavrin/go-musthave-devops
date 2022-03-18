@@ -1,7 +1,6 @@
-package server
+package server_test
 
 import (
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -10,77 +9,122 @@ import (
 
 	"net/http"
 	"net/http/httptest"
+
+	"github.com/alexey-mavrin/go-musthave-devops/internal/server"
 )
 
-func supressLog() {
-	log.SetOutput(ioutil.Discard)
+type testValues struct {
+	useJSON    bool
+	supressLog bool
+	body       string
+	method     string
+	path       string
+	server     *httptest.Server
 }
 
-func resumeLog() {
-	log.SetOutput(os.Stdout)
+func newBenchTest(router http.Handler) *testValues {
+	return &testValues{
+		useJSON:    false,
+		supressLog: true,
+		method:     http.MethodGet,
+		server:     httptest.NewServer(router),
+	}
+}
+
+func (tv *testValues) setJSON(j bool) *testValues {
+	tv.useJSON = j
+	return tv
+}
+
+func (tv *testValues) supressLogging(l bool) *testValues {
+	tv.supressLog = l
+	return tv
+}
+
+func (tv *testValues) setMethod(m string) *testValues {
+	tv.method = m
+	return tv
+}
+
+func (tv *testValues) setPath(p string) *testValues {
+	tv.path = p
+	return tv
+}
+
+func (tv *testValues) setBody(b string) *testValues {
+	tv.body = b
+	return tv
 }
 
 func BenchmarkUpdate(b *testing.B) {
-	router := Router()
-	ts := httptest.NewServer(router)
+	router := server.Router()
 
 	b.Run("updateCounter", func(b *testing.B) {
-		method := "POST"
-		path := "/update/counter/RandomValue/1"
-		j := false
-		l := false
+		tv := newBenchTest(router).
+			setMethod(http.MethodPost).
+			setPath("/update/counter/RandomValue/1").
+			setJSON(false).
+			supressLogging(true)
 		for i := 0; i < b.N; i++ {
-			r := strings.NewReader("")
-			resp, body := testRequestBench(ts, method, path, r, j, l)
-			if resp.StatusCode != 200 {
-				log.Fatal("request status is not 200, ", body)
+			statusCode, body, err := tv.doTestRequest()
+			if err != nil {
+				b.Fatal(err)
 			}
-			resp.Body.Close()
+			if statusCode != 200 {
+				b.Fatal("request status is not 200, ", body)
+			}
 		}
 	})
 
 	b.Run("updataJSONCounter", func(b *testing.B) {
-		method := "POST"
-		path := "/update/"
-		j := true
-		l := false
+		tv := newBenchTest(router).
+			setMethod(http.MethodPost).
+			setPath("/update/").
+			setJSON(true).
+			supressLogging(true).
+			setBody(`{"id":"xyz","type":"counter","delta":10}`)
 		for i := 0; i < b.N; i++ {
-			r := strings.NewReader(`{"id":"xyz","type":"counter","delta":10}`)
-			resp, body := testRequestBench(ts, method, path, r, j, l)
-			if resp.StatusCode != 200 {
-				log.Fatal("request status is not 200, ", body)
+			statusCode, body, err := tv.doTestRequest()
+			if err != nil {
+				b.Fatal(err)
 			}
-			resp.Body.Close()
+			if statusCode != 200 {
+				b.Fatal("request status is not 200, ", body)
+			}
 		}
 	})
 }
 
-func testRequestBench(ts *httptest.Server, method, path string, r io.Reader, useJSON bool, doLog bool) (*http.Response, string) {
-	req, err := http.NewRequest(method, ts.URL+path, r)
+func (tv testValues) doTestRequest() (int, string, error) {
+	r := strings.NewReader(tv.body)
+	req, err := http.NewRequest(tv.method, tv.server.URL+tv.path, r)
 	if err != nil {
-		log.Fatal("NewRequest: ", err)
+		return 0, "", err
 	}
 
-	if useJSON {
+	if tv.useJSON {
 		req.Header.Add("Content-Type", "application/json")
 	}
 
-	if !doLog {
-		supressLog()
+	if tv.supressLog {
+		log.SetOutput(ioutil.Discard)
 	}
+
 	resp, err := http.DefaultClient.Do(req)
-	if !doLog {
-		resumeLog()
+
+	if tv.supressLog {
+		log.SetOutput(os.Stdout)
 	}
 
 	if err != nil {
-		log.Fatal("http.DefaultClient.Do: ", err)
+		return 0, "", err
 	}
+	defer resp.Body.Close()
 
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal("ioutil.ReadAll: ", err)
+		return 0, "", err
 	}
 
-	return resp, string(respBody)
+	return resp.StatusCode, string(respBody), nil
 }
