@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -336,9 +337,12 @@ func MetricHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+var dumpPool = sync.Pool{
+	New: func() interface{} { return new(bytes.Buffer) },
+}
+
 // DumpHandler prints all available metrics
 func DumpHandler(w http.ResponseWriter, r *http.Request) {
-	str := ""
 	mu.Lock()
 
 	cNames := make([]string, 0, len(statistics.Counters))
@@ -353,16 +357,20 @@ func DumpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.Strings(gNames)
 
+	var buf = dumpPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer dumpPool.Put(buf)
+
 	for _, n := range cNames {
-		str = str + fmt.Sprintf("%s %v\n", n, statistics.Counters[n])
+		fmt.Fprintf(buf, "%s %v\n", n, statistics.Counters[n])
 	}
 	for _, n := range gNames {
-		str = str + fmt.Sprintf("%s %v\n", n, statistics.Gauges[n])
+		fmt.Fprintf(buf, "%s %v\n", n, statistics.Gauges[n])
 	}
 
 	mu.Unlock()
 	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(str))
+	w.Write(buf.Bytes())
 }
 
 // JSONUpdateHandler — stores metrics in server from json updates
@@ -508,5 +516,7 @@ func Router() chi.Router {
 	r.Post("/updates/", JSONUpdateHandler)
 	r.Post("/update/{typ}/{name}/", Handler400)
 	r.Post("/update/{typ}/{name}/{rawVal}", UpdateHandler)
+
+	r.Mount("/debug", middleware.Profiler())
 	return r
 }

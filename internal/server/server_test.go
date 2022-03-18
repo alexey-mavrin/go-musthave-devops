@@ -14,16 +14,18 @@ import (
 )
 
 func TestRouter(t *testing.T) {
-	type args struct {
-		w http.ResponseWriter
-		r *http.Request
-	}
+	/*
+		type args struct {
+			w http.ResponseWriter
+			r *http.Request
+		}
+	*/
 	type want struct {
 		code int
 		body []string
 	}
-	r := Router()
-	ts := httptest.NewServer(r)
+	router := Router()
+	ts := httptest.NewServer(router)
 	defer ts.Close()
 	tests := []struct {
 		name    string
