@@ -1,3 +1,6 @@
+//go:build ignore
+// +build ignore
+
 package main
 
 import (
@@ -120,6 +123,17 @@ func addSAChecks(mychecks []*analysis.Analyzer) []*analysis.Analyzer {
 		}
 	}
 	return mychecks
+}
+
+var osExitAnalyzer = &analysis.Analyzer{
+	Name: "exitcheck",
+	Doc:  "check for os.Exit in main function",
+	Run:  runExitCheck,
+}
+
+func runExitCheck(pass *analysis.Pass) (interface{}, error) {
+	// реализация будет позднее
+	return nil, nil
 }
 
 func main() {
