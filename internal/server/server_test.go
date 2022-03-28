@@ -21,8 +21,8 @@ func TestRouter(t *testing.T) {
 		}
 	*/
 	type want struct {
-		code int
 		body []string
+		code int
 	}
 	router := Router()
 	ts := httptest.NewServer(router)
@@ -32,8 +32,8 @@ func TestRouter(t *testing.T) {
 		method  string
 		args    string
 		body    string
-		useJSON bool
 		want    want
+		useJSON bool
 	}{
 		{
 			name:   "gauge OK",

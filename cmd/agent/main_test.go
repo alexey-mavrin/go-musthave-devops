@@ -11,16 +11,16 @@ import (
 func Test_setAgentArgs(t *testing.T) {
 	type want struct {
 		ServerAddr     string
+		Key            string
 		PollInterval   time.Duration
 		ReportInterval time.Duration
-		Key            string
 		useJSON        bool
 		useBatch       bool
 	}
 	tests := []struct {
 		name    string
-		wantErr bool
 		want    want
+		wantErr bool
 	}{
 		{
 			name:    "setAgentArgs makes default config",

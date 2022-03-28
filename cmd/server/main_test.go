@@ -11,11 +11,11 @@ import (
 func Test_setServerArgs(t *testing.T) {
 	type want struct {
 		Address       string
-		StoreInterval time.Duration
 		StoreFile     string
-		Restore       bool
 		Key           string
 		DatabaseDSN   string
+		StoreInterval time.Duration
+		Restore       bool
 	}
 	tests := []struct {
 		name string

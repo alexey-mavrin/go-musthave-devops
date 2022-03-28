@@ -42,3 +42,6 @@ run_load:
 	bombardier -c 500 -d 100s  http://localhost:8080/
 
 test_load: build_agent build_server run_server run_agent run_load
+
+custom_check:
+	go run ./cmd/staticlint/main.go ./...

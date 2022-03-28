@@ -14,12 +14,12 @@ import (
 )
 
 type testValues struct {
-	useJSON    bool
-	supressLog bool
+	server     *httptest.Server
 	body       string
 	method     string
 	path       string
-	server     *httptest.Server
+	useJSON    bool
+	supressLog bool
 }
 
 func newBenchTest(router http.Handler) *testValues {
