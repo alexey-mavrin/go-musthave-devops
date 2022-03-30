@@ -31,6 +31,7 @@ type config struct {
 	StoreFile     *string        `env:"STORE_FILE"`
 	Restore       *bool          `env:"RESTORE"`
 	Key           *string        `env:"KEY"`
+	CryptoKey     *string        `env:"CRYPTO_KEY"`
 	DatabaseDSN   *string        `env:"DATABASE_DSN"`
 }
 
@@ -63,6 +64,7 @@ func setServerArgs() {
 	fileFlag := flag.String("f", defaultStoreFile, "store file")
 	restoreFlag := flag.Bool("r", defaultRestore, "restore")
 	keyFlag := flag.String("k", "", "key")
+	cryptoKeyFlag := flag.String("c", "", "crypto key")
 	dbFlag := flag.String("d", "", "database dsn")
 
 	flag.Parse()
@@ -98,6 +100,11 @@ func setServerArgs() {
 		server.Config.Key = *cfg.Key
 	}
 
+	server.Config.CryptoKey = *cryptoKeyFlag
+	if cfg.CryptoKey != nil {
+		server.Config.CryptoKey = *cfg.CryptoKey
+	}
+
 	server.Config.DatabaseDSN = *dbFlag
 	if cfg.DatabaseDSN != nil {
 		server.Config.DatabaseDSN = *cfg.DatabaseDSN
@@ -114,6 +121,9 @@ func main() {
 	}
 
 	log.Printf("server started with %v", string(prettyConfig))
+	if err := server.ReadServerKey(); err != nil {
+		log.Fatal(err)
+	}
 
 	err = server.StartServer()
 	if err != nil {

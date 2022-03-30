@@ -15,6 +15,7 @@ type config struct {
 	PollInterval   *time.Duration `env:"POLL_INTERVAL"`
 	ReportInterval *time.Duration `env:"REPORT_INTERVAL"`
 	Key            *string        `env:"KEY"`
+	CryptoKey      *string        `env:"CRYPTO_KEY"`
 }
 
 const (
@@ -40,7 +41,8 @@ func setAgentArgs() error {
 	addressFlag := flag.String("a", defaultAddress, "server address")
 	pollIntervalFlag := flag.Duration("p", defaultPollInterval, "poll interval")
 	reportIntervalFlag := flag.Duration("r", defaultReportInterval, "report interval")
-	keyFlag := flag.String("k", "", "crypto key")
+	keyFlag := flag.String("k", "", "key")
+	cryptoKeyFlag := flag.String("c", "", "crypto key")
 
 	flag.Parse()
 
@@ -64,6 +66,11 @@ func setAgentArgs() error {
 		agent.Config.Key = *cfg.Key
 	}
 
+	agent.Config.CryptoKey = *cryptoKeyFlag
+	if cfg.CryptoKey != nil {
+		agent.Config.CryptoKey = *cfg.CryptoKey
+	}
+
 	return nil
 }
 
@@ -72,6 +79,9 @@ func main() {
 		log.Fatal(err)
 	}
 	common.PrintBuildInfo(buildVersion, buildDate, buildCommit)
+	if err := agent.ReadServerKey(); err != nil {
+		log.Fatal(err)
+	}
 
 	// we don't need \n as log.Printf do is automatically
 	log.Printf("agent started with %+v", agent.Config)

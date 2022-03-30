@@ -45,3 +45,8 @@ test_load: build_agent build_server run_server run_agent run_load
 
 custom_check:
 	go run ./cmd/staticlint/main.go ./...
+
+server_keys:
+	mkdir -p keys
+	go run ./cmd/genkeys/main.go keys
+
