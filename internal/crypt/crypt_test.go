@@ -39,8 +39,8 @@ func TestReadKeys(t *testing.T) {
 	}
 	tests := []struct {
 		name string
-		args args
 		want want
+		args args
 	}{
 		{
 			name: "correct scenario",

@@ -13,6 +13,7 @@ func Test_setServerArgs(t *testing.T) {
 		Address       string
 		StoreFile     string
 		Key           string
+		CryptoKey     string
 		DatabaseDSN   string
 		StoreInterval time.Duration
 		Restore       bool

@@ -1,3 +1,4 @@
+// Package crypt provides encryption and decryption utility functions
 package crypt
 
 import (

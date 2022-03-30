@@ -1,3 +1,4 @@
+// Package other is testing package file
 package other
 
 import "os"

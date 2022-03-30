@@ -121,7 +121,7 @@ func main() {
 	}
 
 	log.Printf("server started with %v", string(prettyConfig))
-	if err := server.ReadServerKey(); err != nil {
+	if err = server.ReadServerKey(); err != nil {
 		log.Fatal(err)
 	}
 
