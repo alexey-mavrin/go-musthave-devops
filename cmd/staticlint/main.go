@@ -131,7 +131,7 @@ func main() {
 	var mychecks []*analysis.Analyzer
 	mychecks = addPasses(mychecks)
 	mychecks = addSAChecks(mychecks)
-	mychecks = append(mychecks, osexit.OSExitAnalyzer)
+	mychecks = append(mychecks, osexit.Analyzer)
 
 	multichecker.Main(
 		mychecks...,

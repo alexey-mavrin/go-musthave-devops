@@ -1,3 +1,5 @@
+// Package osexit provides the analyzer which detects the os.Exit
+// usage in main function
 package osexit
 
 import (
@@ -8,8 +10,8 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
-// OSExitAnalyzer is os.Exit-in-main analyzer
-var OSExitAnalyzer = &analysis.Analyzer{
+// Analyzer is os.Exit-in-main analyzer
+var Analyzer = &analysis.Analyzer{
 	Name: "exitcheck",
 	Doc:  "check for os.Exit in main function",
 	Run:  runExitCheck,
