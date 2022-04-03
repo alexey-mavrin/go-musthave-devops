@@ -45,7 +45,7 @@ func isFlagPassed(name string) bool {
 	return found
 }
 
-func setServerArgs() {
+func setServerArgs() error {
 	var cfg config
 	err := env.Parse(&cfg)
 	if err != nil {
@@ -59,6 +59,8 @@ func setServerArgs() {
 		cfg.StoreFile = &empty
 	}
 
+	// FIXME: using `C` temporarily
+	configFileFlag := flag.String("C", "", "server config file")
 	addressFlag := flag.String("a", defaultAddress, "bind address")
 	storeIntervalFlag := flag.Duration("i", defaultStoreInterval, "store interval")
 	fileFlag := flag.String("f", defaultStoreFile, "store file")
@@ -72,17 +74,41 @@ func setServerArgs() {
 	log.Printf("server is invoked with ENV %+v", cfg)
 	log.Printf("server is invoked with flags address %v store interval %v store file %v restore %v database %v", *addressFlag, *storeIntervalFlag, *fileFlag, *restoreFlag, *dbFlag)
 
-	server.Config.Address = *addressFlag
-	if cfg.Address != nil {
-		server.Config.Address = *cfg.Address
+	var fileConfig server.JSONConfig
+	if isFlagPassed("C") {
+		fileConfig, err = server.ReadJSONConfig(*configFileFlag)
+		if err != nil {
+			return err
+		}
 	}
-	server.Config.StoreInterval = *storeIntervalFlag
+
+	if theAddress := common.FirstSet(
+		fileConfig.Address,
+		addressFlag,
+		cfg.Address,
+	); theAddress != nil {
+		server.Config.Address = *theAddress
+	}
+
+	server.Config.StoreInterval = defaultStoreInterval
+	if fileConfig.StoreIntervalStr != nil {
+		server.Config.StoreInterval, err = time.ParseDuration(*fileConfig.StoreIntervalStr)
+		if err != nil {
+			return err
+		}
+	}
+	if isFlagPassed("i") {
+		server.Config.StoreInterval = *storeIntervalFlag
+	}
 	if cfg.StoreInterval != nil {
 		server.Config.StoreInterval = *cfg.StoreInterval
 	}
 
 	// we need to distinguish between default string value and empty env var
 	server.Config.StoreFile = defaultStoreFile
+	if fileConfig.StoreFile != nil {
+		server.Config.StoreFile = *fileConfig.StoreFile
+	}
 	if cfg.StoreFile != nil {
 		server.Config.StoreFile = *cfg.StoreFile
 	}
@@ -90,29 +116,49 @@ func setServerArgs() {
 		server.Config.StoreFile = *fileFlag
 	}
 
-	server.Config.Restore = *restoreFlag
+	server.Config.Restore = true
+	if fileConfig.Restore != nil {
+		server.Config.Restore = *fileConfig.Restore
+	}
+	if isFlagPassed("r") {
+		server.Config.Restore = *restoreFlag
+	}
 	if cfg.Restore != nil {
 		server.Config.Restore = *cfg.Restore
 	}
 
-	server.Config.Key = *keyFlag
-	if cfg.Key != nil {
-		server.Config.Key = *cfg.Key
+	if theKey := common.FirstSet(
+		fileConfig.Key,
+		keyFlag,
+		cfg.Key,
+	); theKey != nil {
+		server.Config.Key = *theKey
 	}
 
-	server.Config.CryptoKey = *cryptoKeyFlag
-	if cfg.CryptoKey != nil {
-		server.Config.CryptoKey = *cfg.CryptoKey
+	if theCryptoKey := common.FirstSet(
+		fileConfig.CryptoKey,
+		cryptoKeyFlag,
+		cfg.CryptoKey,
+	); theCryptoKey != nil {
+		server.Config.CryptoKey = *theCryptoKey
 	}
 
-	server.Config.DatabaseDSN = *dbFlag
-	if cfg.DatabaseDSN != nil {
-		server.Config.DatabaseDSN = *cfg.DatabaseDSN
+	if theDatabaseDSN := common.FirstSet(
+		fileConfig.DatabaseDSN,
+		dbFlag,
+		cfg.DatabaseDSN,
+	); theDatabaseDSN != nil {
+		server.Config.DatabaseDSN = *theDatabaseDSN
 	}
+
+	return nil
 }
 
 func main() {
-	setServerArgs()
+	if err := setServerArgs(); err != nil {
+		log.Fatal(err)
+	}
+
 	common.PrintBuildInfo(buildVersion, buildDate, buildCommit)
 
 	prettyConfig, err := json.Marshal(server.Config)
