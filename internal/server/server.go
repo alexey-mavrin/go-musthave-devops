@@ -26,7 +26,8 @@ import (
 
 type statType int
 
-type serverConfig struct {
+// ConfigType is the struct with all server config parameters
+type ConfigType struct {
 	Address       string
 	StoreFile     string
 	Key           string
@@ -37,7 +38,7 @@ type serverConfig struct {
 }
 
 // Config stores server configuration
-var Config serverConfig = serverConfig{}
+var Config ConfigType = ConfigType{}
 
 var mu sync.Mutex
 

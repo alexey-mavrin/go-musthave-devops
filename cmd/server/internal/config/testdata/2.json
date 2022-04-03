@@ -1,5 +1,5 @@
 {
     "address": "l:1",
-    "restore": true,
+    "restore": false,
     "store_interval": "33s"
 }

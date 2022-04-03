@@ -19,9 +19,9 @@ func Test_setServerArgs(t *testing.T) {
 		Restore       bool
 	}
 	tests := []struct {
+		wantErr assert.ErrorAssertionFunc
 		name    string
 		want    want
-		wantErr assert.ErrorAssertionFunc
 	}{
 		{
 			name: "setServerArgs sets default server config",

@@ -23,6 +23,10 @@ build_server:
 	echo "Building server..."
 	go build -o server_main cmd/server/main.go
 
+build_staticlint:
+	echo "Building staticlint..."
+	go build -o staticlint_main cmd/staticlint/main.go
+
 kill_server:
 	echo "Stopping server..."
 	pkill server_main || true
