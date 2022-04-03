@@ -6,7 +6,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func addr[T any](t T) *T {
+func addrStr(t string) *string {
+	return &t
+}
+
+func addrBool(t bool) *bool {
 	return &t
 }
 
@@ -22,13 +26,13 @@ func TestBuilder_ReadJSONConfig(t *testing.T) {
 			jsonConfig: "testdata/1.json",
 			want: &Builder{
 				jsonConfig: JSONConfig{
-					Address:          addr("l:1"),
-					StoreFile:        addr("/path/to/file.db"),
-					Key:              addr("qwerty"),
-					CryptoKey:        addr("/path/to/key.pem"),
-					DatabaseDSN:      addr("psql:l:1234"),
-					StoreIntervalStr: addr("33s"),
-					Restore:          addr(true),
+					Address:          addrStr("l:1"),
+					StoreFile:        addrStr("/path/to/file.db"),
+					Key:              addrStr("qwerty"),
+					CryptoKey:        addrStr("/path/to/key.pem"),
+					DatabaseDSN:      addrStr("psql:l:1234"),
+					StoreIntervalStr: addrStr("33s"),
+					Restore:          addrBool(true),
 				},
 			},
 			wantErr: assert.NoError,
@@ -43,7 +47,7 @@ func TestBuilder_ReadJSONConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			builder := NewBuilder()
 			builder.MergeDefaults()
-			builder.envVars.ConfigFile = addr(tt.jsonConfig)
+			builder.envVars.ConfigFile = addrStr(tt.jsonConfig)
 			got := builder.ReadJSONConfig()
 			if tt.want != nil {
 				assert.EqualValues(t,
