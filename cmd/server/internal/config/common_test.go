@@ -111,7 +111,7 @@ func TestBuilder_Final(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			builder := NewBuilder()
 			if tt.jsonConfig != "" {
-				builder.envVars.ConfigFile = addr(tt.jsonConfig)
+				builder.envVars.ConfigFile = addrStr(tt.jsonConfig)
 			}
 			builder.MergeDefaults()
 			builder.ReadJSONConfig().MergeJSONConfig()
