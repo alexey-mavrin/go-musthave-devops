@@ -15,6 +15,8 @@ exec:
 test:
 	go test -v ./...
 
+build: build_agent build_server build_staticlint
+
 build_agent:
 	echo "Building agent..."
 	go build -o agent_main cmd/agent/main.go
