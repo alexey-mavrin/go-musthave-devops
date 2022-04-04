@@ -3,6 +3,7 @@ package config
 
 import (
 	"log"
+	"strings"
 	"time"
 
 	"github.com/alexey-mavrin/go-musthave-devops/internal/agent"
@@ -70,6 +71,10 @@ func (b *Builder) ReportJSONConfig() *Builder {
 
 // Final returns the finally built config
 func (b Builder) Final() agent.ConfigType {
+	// check if server address was given without "http://" or "https://"
+	if !strings.HasPrefix(b.partial.ServerAddr, "http") {
+		b.partial.ServerAddr = "http://" + b.partial.ServerAddr
+	}
 	cfg := b.partial
 	return cfg
 }
