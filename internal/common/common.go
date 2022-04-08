@@ -1,3 +1,4 @@
+// Package common contains the code common to the server and the agent
 package common
 
 import (

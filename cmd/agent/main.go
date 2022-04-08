@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/alexey-mavrin/go-musthave-devops/internal/agent"
+	"github.com/alexey-mavrin/go-musthave-devops/internal/common"
 	"github.com/caarlos0/env/v6"
 )
 
@@ -21,6 +22,12 @@ const (
 	defaultScheme         = "http"
 	defaultPollInterval   = time.Second * 2
 	defaultReportInterval = time.Second * 10
+)
+
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
 )
 
 func setAgentArgs() error {
@@ -64,6 +71,7 @@ func main() {
 	if err := setAgentArgs(); err != nil {
 		log.Fatal(err)
 	}
+	common.PrintBuildInfo(buildVersion, buildDate, buildCommit)
 
 	// we don't need \n as log.Printf do is automatically
 	log.Printf("agent started with %+v", agent.Config)

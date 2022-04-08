@@ -29,6 +29,5 @@ vendor/
 
 # cover report
 cover.html
-main
 server_main
 agent_main

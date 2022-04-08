@@ -1,3 +1,4 @@
+// Package agent is the package with the agent code.
 package agent
 
 import (
@@ -18,15 +19,15 @@ import (
 )
 
 type statData struct {
+	CPUutilLastTime time.Time
+	CPUtime         []float64
+	CPUutilization  []float64
 	mu              sync.Mutex
 	memStats        runtime.MemStats
 	PollCount       int64
 	RandomValue     int
 	TotalMemory     float64
 	FreeMemory      float64
-	CPUtime         []float64
-	CPUutilization  []float64
-	CPUutilLastTime time.Time
 }
 
 func init() {
@@ -53,9 +54,9 @@ const (
 
 type agentConfig struct {
 	ServerAddr     string
+	Key            string
 	PollInterval   time.Duration
 	ReportInterval time.Duration
-	Key            string
 	useJSON        bool
 	useBatch       bool
 }

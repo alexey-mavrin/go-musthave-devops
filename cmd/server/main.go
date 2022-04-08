@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/alexey-mavrin/go-musthave-devops/internal/common"
 	"github.com/alexey-mavrin/go-musthave-devops/internal/server"
 	"github.com/caarlos0/env/v6"
 )
@@ -16,6 +17,12 @@ const (
 	defaultStoreInterval = time.Second * 300
 	defaultStoreFile     = "/tmp/devops-metrics-db.json"
 	defaultRestore       = true
+)
+
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
 )
 
 type config struct {
@@ -99,6 +106,7 @@ func setServerArgs() {
 
 func main() {
 	setServerArgs()
+	common.PrintBuildInfo(buildVersion, buildDate, buildCommit)
 
 	prettyConfig, err := json.Marshal(server.Config)
 	if err != nil {

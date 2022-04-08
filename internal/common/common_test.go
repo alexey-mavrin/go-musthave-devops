@@ -24,10 +24,10 @@ func TestMetrics_ComputeHash(t *testing.T) {
 		key string
 	}
 	tests := []struct {
+		want    *[]byte
 		name    string
 		fields  fields
 		args    args
-		want    *[]byte
 		wantErr bool
 	}{
 		{

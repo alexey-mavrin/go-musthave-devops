@@ -1,3 +1,4 @@
+// Package server is the package with the server code.
 package server
 
 import (
@@ -25,11 +26,11 @@ type statType int
 
 type serverConfig struct {
 	Address       string
-	StoreInterval time.Duration
 	StoreFile     string
-	Restore       bool
 	Key           string
 	DatabaseDSN   string
+	StoreInterval time.Duration
+	Restore       bool
 }
 
 // Config stores server configuration
@@ -60,8 +61,8 @@ var (
 )
 
 type statReq struct {
-	statType     statType
 	name         string
+	statType     statType
 	valueCounter int64
 	valueGauge   float64
 }
