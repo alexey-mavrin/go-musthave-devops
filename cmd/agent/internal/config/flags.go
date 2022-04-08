@@ -36,8 +36,7 @@ type flags struct {
 
 // ProcessFlags sets command-line flags to use
 func (b *Builder) ProcessFlags() *Builder {
-	// FIXME: using `C` temporarily
-	b.flags.configFile.option = "C"
+	b.flags.configFile.option = "c"
 	b.flags.configFile.value = flag.String(b.flags.configFile.option, "", "server config file")
 
 	b.flags.address.option = "a"
@@ -52,7 +51,7 @@ func (b *Builder) ProcessFlags() *Builder {
 	b.flags.key.option = "k"
 	b.flags.key.value = flag.String(b.flags.key.option, "", "key")
 
-	b.flags.cryptoKey.option = "c"
+	b.flags.cryptoKey.option = "crypto-key"
 	b.flags.cryptoKey.value = flag.String(b.flags.cryptoKey.option, "", "crypto key")
 
 	flag.Parse()
