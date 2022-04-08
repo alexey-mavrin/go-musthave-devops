@@ -44,6 +44,7 @@ jobs:
 
       - name: Build agent binary
         run: |
+          go get ./...
           cd cmd/agent
           go build -o agent
 

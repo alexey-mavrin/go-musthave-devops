@@ -3,6 +3,6 @@ package other
 
 import "os"
 
-func main() {
+func t() {
 	os.Exit(0)
 }
