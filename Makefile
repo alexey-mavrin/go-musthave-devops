@@ -15,6 +15,8 @@ exec:
 test:
 	go test -v ./...
 
+build: build_agent build_server build_staticlint
+
 build_agent:
 	echo "Building agent..."
 	go build -o agent_main cmd/agent/main.go
@@ -22,6 +24,10 @@ build_agent:
 build_server:
 	echo "Building server..."
 	go build -o server_main cmd/server/main.go
+
+build_staticlint:
+	echo "Building staticlint..."
+	go build -o staticlint_main cmd/staticlint/main.go
 
 kill_server:
 	echo "Stopping server..."

@@ -56,7 +56,8 @@ const (
 	reportInterval = 10 * time.Second
 )
 
-type agentConfig struct {
+// ConfigType contains config options for the agent
+type ConfigType struct {
 	ServerAddr     string
 	Key            string
 	CryptoKey      string
@@ -69,7 +70,7 @@ type agentConfig struct {
 var publicServerKey *rsa.PublicKey
 
 // Config holds configuration parameters for the package
-var Config agentConfig = agentConfig{
+var Config ConfigType = ConfigType{
 	ServerAddr:     defaultServer,
 	PollInterval:   pollInterval,
 	ReportInterval: reportInterval,

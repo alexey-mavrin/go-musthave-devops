@@ -19,8 +19,9 @@ func Test_setServerArgs(t *testing.T) {
 		Restore       bool
 	}
 	tests := []struct {
-		name string
-		want want
+		wantErr assert.ErrorAssertionFunc
+		name    string
+		want    want
 	}{
 		{
 			name: "setServerArgs sets default server config",
@@ -30,12 +31,14 @@ func Test_setServerArgs(t *testing.T) {
 				StoreFile:     "/tmp/devops-metrics-db.json",
 				Restore:       true,
 			},
+			wantErr: assert.NoError,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			setServerArgs()
+			err := setServerArgs()
+			tt.wantErr(t, err)
+			assert.EqualValues(t, tt.want, server.Config)
 		})
-		assert.EqualValues(t, tt.want, server.Config)
 	}
 }
