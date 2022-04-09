@@ -1,27 +1,11 @@
 package main
 
 import (
-	"flag"
 	"log"
-	"time"
 
+	"github.com/alexey-mavrin/go-musthave-devops/cmd/agent/internal/config"
 	"github.com/alexey-mavrin/go-musthave-devops/internal/agent"
 	"github.com/alexey-mavrin/go-musthave-devops/internal/common"
-	"github.com/caarlos0/env/v6"
-)
-
-type config struct {
-	Address        *string        `env:"ADDRESS"`
-	PollInterval   *time.Duration `env:"POLL_INTERVAL"`
-	ReportInterval *time.Duration `env:"REPORT_INTERVAL"`
-	Key            *string        `env:"KEY"`
-}
-
-const (
-	defaultAddress        = "localhost:8080"
-	defaultScheme         = "http"
-	defaultPollInterval   = time.Second * 2
-	defaultReportInterval = time.Second * 10
 )
 
 var (
@@ -31,40 +15,22 @@ var (
 )
 
 func setAgentArgs() error {
-	var cfg config
-	err := env.Parse(&cfg)
-	if err != nil {
-		return err
-	}
+	builder := config.NewBuilder()
 
-	addressFlag := flag.String("a", defaultAddress, "server address")
-	pollIntervalFlag := flag.Duration("p", defaultPollInterval, "poll interval")
-	reportIntervalFlag := flag.Duration("r", defaultReportInterval, "report interval")
-	keyFlag := flag.String("k", "", "crypto key")
+	agent.Config = builder.
+		MergeDefaults().
+		ProcessFlags().
+		ProcessEnvVars().
+		ReadJSONConfig().
+		MergeJSONConfig().
+		MergeFlags().
+		MergeEnvVars().
+		ReportJSONConfig().
+		ReportFlags().
+		ReportEnvVars().
+		Final()
 
-	flag.Parse()
-
-	agent.Config.ServerAddr = defaultScheme + "://" + *addressFlag
-	if cfg.Address != nil {
-		agent.Config.ServerAddr = defaultScheme + "://" + *cfg.Address
-	}
-
-	agent.Config.PollInterval = *pollIntervalFlag
-	if cfg.PollInterval != nil {
-		agent.Config.PollInterval = *cfg.PollInterval
-	}
-
-	agent.Config.ReportInterval = *reportIntervalFlag
-	if cfg.ReportInterval != nil {
-		agent.Config.ReportInterval = *cfg.ReportInterval
-	}
-
-	agent.Config.Key = *keyFlag
-	if cfg.Key != nil {
-		agent.Config.Key = *cfg.Key
-	}
-
-	return nil
+	return builder.Err()
 }
 
 func main() {
@@ -72,6 +38,9 @@ func main() {
 		log.Fatal(err)
 	}
 	common.PrintBuildInfo(buildVersion, buildDate, buildCommit)
+	if err := agent.ReadServerKey(); err != nil {
+		log.Fatal(err)
+	}
 
 	// we don't need \n as log.Printf do is automatically
 	log.Printf("agent started with %+v", agent.Config)

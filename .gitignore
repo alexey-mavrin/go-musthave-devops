@@ -20,6 +20,9 @@ cmd/server/server
 # Dependency directories (remove the comment below to include it)
 vendor/
 
+# Temp keys
+keys/
+
 # IDEs directories
 .idea
 .vscode
@@ -31,3 +34,4 @@ vendor/
 cover.html
 server_main
 agent_main
+staticlint_main

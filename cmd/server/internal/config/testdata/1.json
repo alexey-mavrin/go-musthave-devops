@@ -1,0 +1,9 @@
+{
+    "address": "l:1",
+    "restore": true,
+    "store_interval": "33s",
+    "store_file": "/path/to/file.db",
+    "database_dsn": "psql:l:1234",
+    "crypto_key": "/path/to/key.pem",
+    "key": "qwerty"
+}

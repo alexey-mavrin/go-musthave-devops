@@ -3,6 +3,7 @@ package server
 
 import (
 	"bytes"
+	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -20,21 +21,24 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/alexey-mavrin/go-musthave-devops/internal/common"
+	"github.com/alexey-mavrin/go-musthave-devops/internal/crypt"
 )
 
 type statType int
 
-type serverConfig struct {
+// ConfigType is the struct with all server config parameters
+type ConfigType struct {
 	Address       string
 	StoreFile     string
 	Key           string
+	CryptoKey     string
 	DatabaseDSN   string
 	StoreInterval time.Duration
 	Restore       bool
 }
 
 // Config stores server configuration
-var Config serverConfig = serverConfig{}
+var Config ConfigType = ConfigType{}
 
 var mu sync.Mutex
 
@@ -60,6 +64,8 @@ var (
 	errBadValue  = fmt.Errorf("bad value")
 )
 
+var privateServerKey *rsa.PrivateKey
+
 type statReq struct {
 	name         string
 	statType     statType
@@ -70,6 +76,16 @@ type statReq struct {
 func init() {
 	statistics.Counters = make(map[string]int64)
 	statistics.Gauges = make(map[string]float64)
+}
+
+// ReadServerKey reads server private key if provided
+func ReadServerKey() error {
+	if Config.CryptoKey == "" {
+		return nil
+	}
+	var err error
+	privateServerKey, err = crypt.ReadPrivateKey(Config.CryptoKey)
+	return err
 }
 
 // StartServer starts server
@@ -509,6 +525,7 @@ func updateStatStorage(stat statReq) error {
 func Router() chi.Router {
 	r := chi.NewRouter()
 	r.Use(middleware.Compress(5))
+	r.Use(DecryptBody)
 	r.Get("/", DumpHandler)
 	r.Get("/ping", DBPing)
 	r.Get("/value/{typ}/{name}", MetricHandler)

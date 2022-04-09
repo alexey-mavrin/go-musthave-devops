@@ -3,6 +3,9 @@ package agent
 
 import (
 	"bytes"
+	crand "crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -16,6 +19,7 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 
 	"github.com/alexey-mavrin/go-musthave-devops/internal/common"
+	"github.com/alexey-mavrin/go-musthave-devops/internal/crypt"
 )
 
 type statData struct {
@@ -52,21 +56,36 @@ const (
 	reportInterval = 10 * time.Second
 )
 
-type agentConfig struct {
+// ConfigType contains config options for the agent
+type ConfigType struct {
 	ServerAddr     string
 	Key            string
+	CryptoKey      string
 	PollInterval   time.Duration
 	ReportInterval time.Duration
 	useJSON        bool
 	useBatch       bool
 }
 
+var publicServerKey *rsa.PublicKey
+
 // Config holds configuration parameters for the package
-var Config agentConfig = agentConfig{
+var Config ConfigType = ConfigType{
 	ServerAddr:     defaultServer,
 	PollInterval:   pollInterval,
 	ReportInterval: reportInterval,
 	useBatch:       true,
+}
+
+// ReadServerKey reads server public key if provided
+func ReadServerKey() error {
+	if Config.CryptoKey == "" {
+		return nil
+	}
+	var err error
+	publicServerKey, err = crypt.ReadPublicKey(Config.CryptoKey)
+	log.Printf("key %s read: %v", Config.CryptoKey, publicServerKey)
+	return err
 }
 
 func collectPSStats() {
@@ -171,6 +190,21 @@ func sendBatch(mm []common.Metrics) {
 		return
 	}
 	url := Config.ServerAddr + "/updates/"
+
+	if publicServerKey != nil {
+		encryptedBytes, err := crypt.EncryptOAEP(
+			sha256.New(),
+			crand.Reader,
+			publicServerKey,
+			body.Bytes(),
+			nil)
+		if err != nil {
+			panic(err)
+		}
+		body.Reset()
+		body.Write(encryptedBytes)
+	}
+
 	resp, err := http.Post(url, "application/json", &body)
 	if err != nil {
 		log.Print(err)
