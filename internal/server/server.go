@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -33,6 +34,7 @@ type ConfigType struct {
 	Key           string
 	CryptoKey     string
 	DatabaseDSN   string
+	TrustedSubnet *net.IPNet
 	StoreInterval time.Duration
 	Restore       bool
 }
@@ -526,6 +528,7 @@ func Router() chi.Router {
 	r := chi.NewRouter()
 	r.Use(middleware.Compress(5))
 	r.Use(DecryptBody)
+	r.Use(CheckIP)
 	r.Get("/", DumpHandler)
 	r.Get("/ping", DBPing)
 	r.Get("/value/{typ}/{name}", MetricHandler)

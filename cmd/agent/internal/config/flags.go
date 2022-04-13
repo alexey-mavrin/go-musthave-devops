@@ -2,86 +2,67 @@ package config
 
 import (
 	"flag"
-	"time"
 
 	"github.com/alexey-mavrin/go-musthave-devops/internal/common"
 )
 
-type stringFlag struct {
-	value  *string
-	option string
-	set    bool
-}
-
-type boolFlag struct {
-	value  *bool
-	option string
-	set    bool
-}
-
-type timeFlag struct {
-	value  *time.Duration
-	option string
-	set    bool
-}
-
 type flags struct {
-	configFile     stringFlag
-	address        stringFlag
-	pollInterval   timeFlag
-	reportInterval timeFlag
-	key            stringFlag
-	cryptoKey      stringFlag
+	configFile     common.StringFlag
+	address        common.StringFlag
+	pollInterval   common.TimeFlag
+	reportInterval common.TimeFlag
+	key            common.StringFlag
+	cryptoKey      common.StringFlag
 }
 
 // ProcessFlags sets command-line flags to use
 func (b *Builder) ProcessFlags() *Builder {
-	b.flags.configFile.option = "c"
-	b.flags.configFile.value = flag.String(b.flags.configFile.option, "", "server config file")
+	b.flags.configFile.Option = "c"
+	b.flags.configFile.Value = flag.String(b.flags.configFile.Option, "", "server config file")
 
-	b.flags.address.option = "a"
-	b.flags.address.value = flag.String(b.flags.address.option, b.defaultConfig.ServerAddr, "server address")
+	b.flags.address.Option = "a"
+	b.flags.address.Value = flag.String(b.flags.address.Option, b.defaultConfig.ServerAddr, "server address")
 
-	b.flags.pollInterval.option = "p"
-	b.flags.pollInterval.value = flag.Duration(b.flags.pollInterval.option, b.defaultConfig.PollInterval, "poll interval")
+	b.flags.pollInterval.Option = "p"
+	b.flags.pollInterval.Value = flag.Duration(b.flags.pollInterval.Option, b.defaultConfig.PollInterval, "poll interval")
 
-	b.flags.reportInterval.option = "r"
-	b.flags.reportInterval.value = flag.Duration(b.flags.reportInterval.option, b.defaultConfig.ReportInterval, "report interval")
+	b.flags.reportInterval.Option = "r"
+	b.flags.reportInterval.Value = flag.Duration(b.flags.reportInterval.Option, b.defaultConfig.ReportInterval, "report interval")
 
-	b.flags.key.option = "k"
-	b.flags.key.value = flag.String(b.flags.key.option, "", "key")
+	b.flags.key.Option = "k"
+	b.flags.key.Value = flag.String(b.flags.key.Option, "", "key")
 
-	b.flags.cryptoKey.option = "crypto-key"
-	b.flags.cryptoKey.value = flag.String(b.flags.cryptoKey.option, "", "crypto key")
+	b.flags.cryptoKey.Option = "crypto-key"
+	b.flags.cryptoKey.Value = flag.String(b.flags.cryptoKey.Option, "", "crypto key")
 
 	flag.Parse()
 
-	b.flags.configFile.set = common.IsFlagPassed(b.flags.configFile.option)
-	b.flags.address.set = common.IsFlagPassed(b.flags.address.option)
-	b.flags.pollInterval.set = common.IsFlagPassed(b.flags.pollInterval.option)
-	b.flags.reportInterval.set = common.IsFlagPassed(b.flags.reportInterval.option)
-	b.flags.key.set = common.IsFlagPassed(b.flags.key.option)
-	b.flags.cryptoKey.set = common.IsFlagPassed(b.flags.cryptoKey.option)
+	b.flags.configFile.Set = common.IsFlagPassed(b.flags.configFile.Option)
+	b.flags.address.Set = common.IsFlagPassed(b.flags.address.Option)
+	b.flags.pollInterval.Set = common.IsFlagPassed(b.flags.pollInterval.Option)
+	b.flags.reportInterval.Set = common.IsFlagPassed(b.flags.reportInterval.Option)
+	b.flags.key.Set = common.IsFlagPassed(b.flags.key.Option)
+	b.flags.cryptoKey.Set = common.IsFlagPassed(b.flags.cryptoKey.Option)
 
 	return b
 }
 
 // MergeFlags merges values set with flags into the partial
 func (b *Builder) MergeFlags() *Builder {
-	if b.flags.address.set {
-		b.partial.ServerAddr = *b.flags.address.value
+	if b.flags.address.Set {
+		b.partial.ServerAddr = *b.flags.address.Value
 	}
-	if b.flags.pollInterval.set {
-		b.partial.PollInterval = *b.flags.pollInterval.value
+	if b.flags.pollInterval.Set {
+		b.partial.PollInterval = *b.flags.pollInterval.Value
 	}
-	if b.flags.reportInterval.set {
-		b.partial.ReportInterval = *b.flags.reportInterval.value
+	if b.flags.reportInterval.Set {
+		b.partial.ReportInterval = *b.flags.reportInterval.Value
 	}
-	if b.flags.key.set {
-		b.partial.Key = *b.flags.key.value
+	if b.flags.key.Set {
+		b.partial.Key = *b.flags.key.Value
 	}
-	if b.flags.cryptoKey.set {
-		b.partial.CryptoKey = *b.flags.cryptoKey.value
+	if b.flags.cryptoKey.Set {
+		b.partial.CryptoKey = *b.flags.cryptoKey.Value
 	}
 	return b
 }

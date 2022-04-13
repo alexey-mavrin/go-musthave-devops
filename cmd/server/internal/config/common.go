@@ -2,6 +2,7 @@
 package config
 
 import (
+	"encoding/json"
 	"log"
 	"time"
 
@@ -48,18 +49,20 @@ func (b Builder) Err() error {
 
 // ReportEnvVars prints parsed env vars
 func (b *Builder) ReportEnvVars() *Builder {
-	log.Printf("server is invoked with ENV %+v", b.envVars)
+	data, _ := json.Marshal(b.envVars)
+	log.Printf("server is invoked with ENV %+s", data)
 	return b
 }
 
 // ReportFlags prints passed flags
 func (b *Builder) ReportFlags() *Builder {
-	log.Printf("server is invoked with flags address %v store interval %v store file %v restore %v database %v",
+	log.Printf("server is invoked with flags address %s store interval %v store file %v restore %v database %v trusted subnet %v",
 		b.flags.address,
 		b.flags.storeInterval,
 		b.flags.storeFile,
 		b.flags.restore,
 		b.flags.databaseDSN,
+		b.flags.trustedSubnetStr,
 	)
 
 	return b

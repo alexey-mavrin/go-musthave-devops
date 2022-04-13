@@ -20,6 +20,7 @@ import (
 
 	"github.com/alexey-mavrin/go-musthave-devops/internal/common"
 	"github.com/alexey-mavrin/go-musthave-devops/internal/crypt"
+	"github.com/alexey-mavrin/go-musthave-devops/internal/iproute"
 )
 
 type statData struct {
@@ -183,11 +184,10 @@ func appendBatch(initial []common.Metrics, name string, data interface{}) []comm
 	return initial
 }
 
-func sendBatch(mm []common.Metrics) {
+func sendBatch(mm []common.Metrics) error {
 	var body bytes.Buffer
 	if err := json.NewEncoder(&body).Encode(mm); err != nil {
-		log.Print(err)
-		return
+		return err
 	}
 	url := Config.ServerAddr + "/updates/"
 
@@ -199,25 +199,40 @@ func sendBatch(mm []common.Metrics) {
 			body.Bytes(),
 			nil)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		body.Reset()
 		body.Write(encryptedBytes)
 	}
 
-	resp, err := http.Post(url, "application/json", &body)
+	req, err := http.NewRequest(http.MethodPost, url, &body)
 	if err != nil {
-		log.Print(err)
-		return
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	ip, err := iproute.GetSrcIPURL(url)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("X-Real-IP", ip)
+
+	client := &http.Client{}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("Sending %s, http status %d", url, resp.StatusCode)
 	}
+
+	return nil
 }
 
-func sendStatsBatch() {
+func sendStatsBatch() error {
 	bm := make([]common.Metrics, 0, 100)
 	myStatData.mu.Lock()
 	bm = appendBatch(bm, "PollCount", myStatData.PollCount)
@@ -254,7 +269,7 @@ func sendStatsBatch() {
 	bm = appendBatch(bm, "CPUutilization", myStatData.CPUutilization)
 	myStatData.mu.Unlock()
 
-	sendBatch(bm)
+	return sendBatch(bm)
 }
 
 // RunSendStats periodically sends statistics to a collector
@@ -262,7 +277,10 @@ func RunSendStats() {
 	ticker := time.NewTicker(Config.ReportInterval)
 	for {
 		<-ticker.C
-		sendStatsBatch()
+		err := sendStatsBatch()
+		if err != nil {
+			log.Printf("error sending update: %v", err)
+		}
 	}
 }
 

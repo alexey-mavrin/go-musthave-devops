@@ -20,8 +20,8 @@ type JSONConfig struct {
 // ReadJSONConfig parses config file and returns parsed data in struct
 func (b *Builder) ReadJSONConfig() *Builder {
 	var cf string
-	if b.flags.configFile.set {
-		cf = *b.flags.configFile.value
+	if b.flags.configFile.Set {
+		cf = *b.flags.configFile.Value
 	} else if b.envVars.ConfigFile != nil {
 		cf = *b.envVars.ConfigFile
 	} else {

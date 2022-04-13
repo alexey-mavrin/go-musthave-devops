@@ -2,102 +2,98 @@ package config
 
 import (
 	"flag"
-	"time"
+	"net"
 
 	"github.com/alexey-mavrin/go-musthave-devops/internal/common"
 )
 
-type stringFlag struct {
-	value  *string
-	option string
-	set    bool
-}
-
-type boolFlag struct {
-	value  *bool
-	option string
-	set    bool
-}
-
-type timeFlag struct {
-	value  *time.Duration
-	option string
-	set    bool
-}
-
 type flags struct {
-	configFile    stringFlag
-	address       stringFlag
-	storeInterval timeFlag
-	storeFile     stringFlag
-	restore       boolFlag
-	key           stringFlag
-	cryptoKey     stringFlag
-	databaseDSN   stringFlag
+	configFile       common.StringFlag
+	address          common.StringFlag
+	storeInterval    common.TimeFlag
+	storeFile        common.StringFlag
+	restore          common.BoolFlag
+	key              common.StringFlag
+	cryptoKey        common.StringFlag
+	databaseDSN      common.StringFlag
+	trustedSubnetStr common.StringFlag
 }
 
 // ProcessFlags sets command-line flags to use
 func (b *Builder) ProcessFlags() *Builder {
-	b.flags.configFile.option = "c"
-	b.flags.configFile.value = flag.String(b.flags.configFile.option, "", "server config file")
+	b.flags.configFile.Option = "c"
+	b.flags.configFile.Value = flag.String(b.flags.configFile.Option, "", "server config file")
 
-	b.flags.address.option = "a"
-	b.flags.address.value = flag.String(b.flags.address.option, b.defaultConfig.Address, "bind address")
+	b.flags.address.Option = "a"
+	b.flags.address.Value = flag.String(b.flags.address.Option, b.defaultConfig.Address, "bind address")
 
-	b.flags.storeInterval.option = "i"
-	b.flags.storeInterval.value = flag.Duration(b.flags.storeInterval.option, b.defaultConfig.StoreInterval, "store interval")
+	b.flags.storeInterval.Option = "i"
+	b.flags.storeInterval.Value = flag.Duration(b.flags.storeInterval.Option, b.defaultConfig.StoreInterval, "store interval")
 
-	b.flags.storeFile.option = "f"
-	b.flags.storeFile.value = flag.String(b.flags.storeFile.option, b.defaultConfig.StoreFile, "store file")
+	b.flags.storeFile.Option = "f"
+	b.flags.storeFile.Value = flag.String(b.flags.storeFile.Option, b.defaultConfig.StoreFile, "store file")
 
-	b.flags.restore.option = "r"
-	b.flags.restore.value = flag.Bool(b.flags.restore.option, b.defaultConfig.Restore, "restore")
+	b.flags.restore.Option = "r"
+	b.flags.restore.Value = flag.Bool(b.flags.restore.Option, b.defaultConfig.Restore, "restore")
 
-	b.flags.key.option = "k"
-	b.flags.key.value = flag.String(b.flags.key.option, "", "key")
+	b.flags.key.Option = "k"
+	b.flags.key.Value = flag.String(b.flags.key.Option, "", "key")
 
-	b.flags.cryptoKey.option = "crypto-key"
-	b.flags.cryptoKey.value = flag.String(b.flags.cryptoKey.option, "", "crypto key")
+	b.flags.cryptoKey.Option = "crypto-key"
+	b.flags.cryptoKey.Value = flag.String(b.flags.cryptoKey.Option, "", "crypto key")
 
-	b.flags.databaseDSN.option = "d"
-	b.flags.databaseDSN.value = flag.String(b.flags.databaseDSN.option, "", "database dsn")
+	b.flags.databaseDSN.Option = "d"
+	b.flags.databaseDSN.Value = flag.String(b.flags.databaseDSN.Option, "", "database dsn")
+
+	b.flags.trustedSubnetStr.Option = "t"
+	b.flags.trustedSubnetStr.Value = flag.String(b.flags.trustedSubnetStr.Option, "", "trusted subnet")
 
 	flag.Parse()
 
-	b.flags.configFile.set = common.IsFlagPassed(b.flags.configFile.option)
-	b.flags.address.set = common.IsFlagPassed(b.flags.address.option)
-	b.flags.storeInterval.set = common.IsFlagPassed(b.flags.storeInterval.option)
-	b.flags.storeFile.set = common.IsFlagPassed(b.flags.storeFile.option)
-	b.flags.restore.set = common.IsFlagPassed(b.flags.restore.option)
-	b.flags.key.set = common.IsFlagPassed(b.flags.key.option)
-	b.flags.cryptoKey.set = common.IsFlagPassed(b.flags.cryptoKey.option)
-	b.flags.databaseDSN.set = common.IsFlagPassed(b.flags.databaseDSN.option)
+	b.flags.configFile.Set = common.IsFlagPassed(b.flags.configFile.Option)
+	b.flags.address.Set = common.IsFlagPassed(b.flags.address.Option)
+	b.flags.storeInterval.Set = common.IsFlagPassed(b.flags.storeInterval.Option)
+	b.flags.storeFile.Set = common.IsFlagPassed(b.flags.storeFile.Option)
+	b.flags.restore.Set = common.IsFlagPassed(b.flags.restore.Option)
+	b.flags.key.Set = common.IsFlagPassed(b.flags.key.Option)
+	b.flags.cryptoKey.Set = common.IsFlagPassed(b.flags.cryptoKey.Option)
+	b.flags.databaseDSN.Set = common.IsFlagPassed(b.flags.databaseDSN.Option)
+	b.flags.trustedSubnetStr.Set = common.IsFlagPassed(b.flags.trustedSubnetStr.Option)
 
 	return b
 }
 
 // MergeFlags merges values set with flags into the partial
 func (b *Builder) MergeFlags() *Builder {
-	if b.flags.address.set {
-		b.partial.Address = *b.flags.address.value
+	if b.flags.address.Set {
+		b.partial.Address = *b.flags.address.Value
 	}
-	if b.flags.storeInterval.set {
-		b.partial.StoreInterval = *b.flags.storeInterval.value
+	if b.flags.storeInterval.Set {
+		b.partial.StoreInterval = *b.flags.storeInterval.Value
 	}
-	if b.flags.storeFile.set {
-		b.partial.StoreFile = *b.flags.storeFile.value
+	if b.flags.storeFile.Set {
+		b.partial.StoreFile = *b.flags.storeFile.Value
 	}
-	if b.flags.restore.set {
-		b.partial.Restore = *b.flags.restore.value
+	if b.flags.restore.Set {
+		b.partial.Restore = *b.flags.restore.Value
 	}
-	if b.flags.key.set {
-		b.partial.Key = *b.flags.key.value
+	if b.flags.key.Set {
+		b.partial.Key = *b.flags.key.Value
 	}
-	if b.flags.cryptoKey.set {
-		b.partial.CryptoKey = *b.flags.cryptoKey.value
+	if b.flags.cryptoKey.Set {
+		b.partial.CryptoKey = *b.flags.cryptoKey.Value
 	}
-	if b.flags.databaseDSN.set {
-		b.partial.DatabaseDSN = *b.flags.databaseDSN.value
+	if b.flags.databaseDSN.Set {
+		b.partial.DatabaseDSN = *b.flags.databaseDSN.Value
 	}
+	if b.flags.trustedSubnetStr.Set {
+		_, subnet, err := net.ParseCIDR(*b.flags.trustedSubnetStr.Value)
+		if err != nil {
+			b.err = err
+			return b
+		}
+		b.partial.TrustedSubnet = subnet
+	}
+
 	return b
 }

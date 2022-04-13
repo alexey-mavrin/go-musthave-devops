@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"net"
 	"os"
 	"time"
 
@@ -16,14 +17,15 @@ type JSONConfig struct {
 	CryptoKey        *string `json:"crypto_key"`
 	DatabaseDSN      *string `json:"database_dsn"`
 	StoreIntervalStr *string `json:"store_interval"`
+	TrustedSubnetStr *string `json:"trusted_subnet"`
 	Restore          *bool   `json:"restore"`
 }
 
 // ReadJSONConfig parses config file and returns parsed data in struct
 func (b *Builder) ReadJSONConfig() *Builder {
 	var cf string
-	if b.flags.configFile.set {
-		cf = *b.flags.configFile.value
+	if b.flags.configFile.Set {
+		cf = *b.flags.configFile.Value
 	} else if b.envVars.ConfigFile != nil {
 		cf = *b.envVars.ConfigFile
 	} else {
@@ -63,6 +65,15 @@ func (b *Builder) MergeJSONConfig() *Builder {
 
 	if b.jsonConfig.Restore != nil {
 		b.partial.Restore = *b.jsonConfig.Restore
+	}
+
+	if b.jsonConfig.TrustedSubnetStr != nil {
+		_, subnet, err := net.ParseCIDR(*b.jsonConfig.TrustedSubnetStr)
+		if err != nil {
+			b.err = err
+			return b
+		}
+		b.partial.TrustedSubnet = subnet
 	}
 
 	return b
