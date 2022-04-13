@@ -213,7 +213,7 @@ func sendBatch(mm []common.Metrics) error {
 	req.Header.Set("Content-Type", "application/json")
 	ip, err := iproute.GetSrcIPURL(url)
 	if err != nil {
-		return err
+		log.Printf("error getting source IP address")
 	}
 	req.Header.Set("X-Real-IP", ip)
 
