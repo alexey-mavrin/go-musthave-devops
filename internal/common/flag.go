@@ -27,7 +27,7 @@ type TimeFlag struct {
 }
 
 func (s StringFlag) String() string {
-	var a AnyFlag = AnyFlag{
+	var a = AnyFlag{
 		value:  s.Value,
 		option: s.Option,
 		set:    s.Set,
@@ -36,7 +36,7 @@ func (s StringFlag) String() string {
 }
 
 func (t TimeFlag) String() string {
-	var a AnyFlag = AnyFlag{
+	var a = AnyFlag{
 		value:  t.Value,
 		option: t.Option,
 		set:    t.Set,
@@ -45,7 +45,7 @@ func (t TimeFlag) String() string {
 }
 
 func (b BoolFlag) String() string {
-	var a AnyFlag = AnyFlag{
+	var a = AnyFlag{
 		value:  b.Value,
 		option: b.Option,
 		set:    b.Set,
