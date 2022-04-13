@@ -61,7 +61,7 @@ type AnyFlag struct {
 }
 
 func (s AnyFlag) String() string {
-	var ret string = "{option: " + s.option + ", "
+	var ret = "{option: " + s.option + ", "
 
 	if s.value != nil {
 		switch v := s.value.(type) {
