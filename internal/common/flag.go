@@ -55,7 +55,7 @@ func (b BoolFlag) String() string {
 
 // AnyFlag is used to convert flag values into a string
 type AnyFlag struct {
-	value  any
+	value  interface{}
 	option string
 	set    bool
 }
