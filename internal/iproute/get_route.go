@@ -1,7 +1,8 @@
-// Package iproute provide a way to find the IP address to be used
+// Package iproute provides a way to find the IP address to be used
 // for reaching the specific target ip.
-// There is a package https://pkg.go.dev/github.com/google/gopacket/routing
-// but unfortunately it gives me an error.
+// There is also a package https://pkg.go.dev/github.com/google/gopacket/routing
+// but unfortunately it gives me an error on a machine with Docker networks
+// configured
 package iproute
 
 import (
