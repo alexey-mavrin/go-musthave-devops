@@ -184,6 +184,8 @@ func appendBatch(initial []common.Metrics, name string, data interface{}) []comm
 	return initial
 }
 
+var logOnce sync.Once
+
 func sendBatch(mm []common.Metrics) error {
 	var body bytes.Buffer
 	if err := json.NewEncoder(&body).Encode(mm); err != nil {
@@ -213,7 +215,11 @@ func sendBatch(mm []common.Metrics) error {
 	req.Header.Set("Content-Type", "application/json")
 	ip, err := iproute.GetSrcIPURL(url)
 	if err != nil {
-		log.Printf("error getting source IP address")
+		// if we are unable to do it once, chances are high
+		// that we can't do it at all
+		logOnce.Do(func() {
+			log.Printf("error getting source IP address to send to " + url)
+		})
 	}
 	req.Header.Set("X-Real-IP", ip)
 
