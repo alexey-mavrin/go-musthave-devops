@@ -20,9 +20,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"google.golang.org/grpc"
 
 	"github.com/alexey-mavrin/go-musthave-devops/internal/common"
 	"github.com/alexey-mavrin/go-musthave-devops/internal/crypt"
+
+	pb "github.com/alexey-mavrin/go-musthave-devops/internal/grpcint/proto"
 )
 
 type statType int
@@ -123,6 +126,21 @@ func StartServer() error {
 	go func() {
 		err := http.ListenAndServe(Config.Address, r)
 		c <- err
+	}()
+
+	go func() {
+		listen, err := net.Listen("tcp", ":3200")
+		if err != nil {
+			c <- err
+		}
+		s := grpc.NewServer()
+		pb.RegisterMetricesServer(s, &MetricesServer{})
+		log.Print("Serving gRPC...")
+		err = s.Serve(listen)
+		if err != nil {
+			c <- err
+		}
+
 	}()
 
 	signalChannel := make(chan os.Signal, 2)
