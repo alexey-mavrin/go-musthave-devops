@@ -10,6 +10,7 @@ import (
 	"github.com/alexey-mavrin/go-musthave-devops/internal/grpcint"
 	pb "github.com/alexey-mavrin/go-musthave-devops/internal/grpcint/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type cfg struct {
@@ -62,7 +63,10 @@ func main() {
 	pList := make([](*pb.Metrics), 0)
 	pList = append(pList, p)
 
-	conn, err := grpc.Dial(config.server, grpc.WithInsecure())
+	conn, err := grpc.Dial(
+		config.server,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 
 	if err != nil {
 		log.Fatal(err)
