@@ -26,6 +26,7 @@ func NewBuilder() *Builder {
 			ServerAddr:     "http://localhost:8080",
 			PollInterval:   time.Second * 2,
 			ReportInterval: time.Second * 10,
+			GRPCServer:     ":3200",
 		},
 	}
 	return &b
@@ -36,6 +37,7 @@ func (b *Builder) MergeDefaults() *Builder {
 	b.partial.ServerAddr = b.defaultConfig.ServerAddr
 	b.partial.PollInterval = b.defaultConfig.PollInterval
 	b.partial.ReportInterval = b.defaultConfig.ReportInterval
+	b.partial.GRPCServer = b.defaultConfig.GRPCServer
 
 	return b
 }
@@ -53,11 +55,13 @@ func (b *Builder) ReportEnvVars() *Builder {
 
 // ReportFlags prints passed flags
 func (b *Builder) ReportFlags() *Builder {
-	log.Printf("agent is invoked with flags address %v poll interval %v report interval %v key file %v",
+	log.Printf("agent is invoked with flags address %v poll interval %v report interval %v key file %v use gRPC %v gRPC server %v",
 		b.flags.address,
 		b.flags.pollInterval,
 		b.flags.reportInterval,
 		b.flags.cryptoKey,
+		b.flags.useGRPC,
+		b.flags.gRPCServer,
 	)
 
 	return b

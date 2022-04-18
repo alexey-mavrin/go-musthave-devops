@@ -15,6 +15,8 @@ type JSONConfig struct {
 	CryptoKey         *string `json:"crypto_key"`
 	PollIntervalStr   *string `json:"poll_interval"`
 	ReportIntervalStr *string `json:"report_interval"`
+	UseGRPC           *bool   `json:"use_grpc"`
+	GRPCServer        *string `json:"grpc_server"`
 }
 
 // ReadJSONConfig parses config file and returns parsed data in struct
@@ -47,6 +49,7 @@ func (b *Builder) MergeJSONConfig() *Builder {
 	common.CopyIfNotNil(&b.partial.ServerAddr, b.jsonConfig.ServerAddr)
 	common.CopyIfNotNil(&b.partial.Key, b.jsonConfig.Key)
 	common.CopyIfNotNil(&b.partial.CryptoKey, b.jsonConfig.CryptoKey)
+	common.CopyIfNotNil(&b.partial.GRPCServer, b.jsonConfig.GRPCServer)
 
 	if b.jsonConfig.PollIntervalStr != nil {
 		pollInterval, err := time.ParseDuration(*b.jsonConfig.PollIntervalStr)
@@ -64,6 +67,10 @@ func (b *Builder) MergeJSONConfig() *Builder {
 			return b
 		}
 		b.partial.ReportInterval = reportInterval
+	}
+
+	if b.jsonConfig.UseGRPC != nil {
+		b.partial.UseGRPC = *b.jsonConfig.UseGRPC
 	}
 
 	return b

@@ -13,6 +13,8 @@ type flags struct {
 	reportInterval common.TimeFlag
 	key            common.StringFlag
 	cryptoKey      common.StringFlag
+	useGRPC        common.BoolFlag
+	gRPCServer     common.StringFlag
 }
 
 // ProcessFlags sets command-line flags to use
@@ -35,6 +37,12 @@ func (b *Builder) ProcessFlags() *Builder {
 	b.flags.cryptoKey.Option = "crypto-key"
 	b.flags.cryptoKey.Value = flag.String(b.flags.cryptoKey.Option, "", "crypto key")
 
+	b.flags.useGRPC.Option = "use-grpc"
+	b.flags.useGRPC.Value = flag.Bool(b.flags.useGRPC.Option, false, "use gRPC")
+
+	b.flags.gRPCServer.Option = "grpc-server"
+	b.flags.gRPCServer.Value = flag.String(b.flags.gRPCServer.Option, "", "gRPC server")
+
 	flag.Parse()
 
 	b.flags.configFile.Set = common.IsFlagPassed(b.flags.configFile.Option)
@@ -43,6 +51,8 @@ func (b *Builder) ProcessFlags() *Builder {
 	b.flags.reportInterval.Set = common.IsFlagPassed(b.flags.reportInterval.Option)
 	b.flags.key.Set = common.IsFlagPassed(b.flags.key.Option)
 	b.flags.cryptoKey.Set = common.IsFlagPassed(b.flags.cryptoKey.Option)
+	b.flags.useGRPC.Set = common.IsFlagPassed(b.flags.useGRPC.Option)
+	b.flags.gRPCServer.Set = common.IsFlagPassed(b.flags.gRPCServer.Option)
 
 	return b
 }
@@ -63,6 +73,12 @@ func (b *Builder) MergeFlags() *Builder {
 	}
 	if b.flags.cryptoKey.Set {
 		b.partial.CryptoKey = *b.flags.cryptoKey.Value
+	}
+	if b.flags.useGRPC.Set {
+		b.partial.UseGRPC = *b.flags.useGRPC.Value
+	}
+	if b.flags.gRPCServer.Set {
+		b.partial.GRPCServer = *b.flags.gRPCServer.Value
 	}
 	return b
 }
