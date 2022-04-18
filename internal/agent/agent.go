@@ -3,10 +3,12 @@ package agent
 
 import (
 	"bytes"
+	"context"
 	crand "crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -17,9 +19,14 @@ import (
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/alexey-mavrin/go-musthave-devops/internal/common"
 	"github.com/alexey-mavrin/go-musthave-devops/internal/crypt"
+	"github.com/alexey-mavrin/go-musthave-devops/internal/grpcint"
+	pb "github.com/alexey-mavrin/go-musthave-devops/internal/grpcint/proto"
+
 	"github.com/alexey-mavrin/go-musthave-devops/internal/iproute"
 )
 
@@ -62,10 +69,12 @@ type ConfigType struct {
 	ServerAddr     string
 	Key            string
 	CryptoKey      string
+	GRPCServer     string
 	PollInterval   time.Duration
 	ReportInterval time.Duration
 	useJSON        bool
 	useBatch       bool
+	UseGRPC        bool
 }
 
 var publicServerKey *rsa.PublicKey
@@ -186,6 +195,43 @@ func appendBatch(initial []common.Metrics, name string, data interface{}) []comm
 
 var logOnce sync.Once
 
+func sendBatchGRPC(mm []common.Metrics) error {
+	pList := make([](*pb.Metrics), 0, len(mm))
+	for _, m := range mm {
+		p := grpcint.MetricsToPb(m)
+		if Config.Key != "" {
+			grpcint.StoreHash(p, Config.Key)
+		}
+		pList = append(pList, p)
+	}
+
+	req := pb.UpdateMetricesRequest{
+		Count:    int32(len(mm)),
+		Metrices: pList,
+	}
+
+	conn, err := grpc.Dial(
+		Config.GRPCServer,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	mc := pb.NewMetricesClient(conn)
+
+	resp, err := mc.UpdateMetrices(context.Background(), &req)
+	if err != nil {
+		return err
+	}
+	if resp != nil && resp.Error != "" {
+		return errors.New(resp.Error)
+	}
+
+	return nil
+}
+
 func sendBatch(mm []common.Metrics) error {
 	var body bytes.Buffer
 	if err := json.NewEncoder(&body).Encode(mm); err != nil {
@@ -275,6 +321,9 @@ func sendStatsBatch() error {
 	bm = appendBatch(bm, "CPUutilization", myStatData.CPUutilization)
 	myStatData.mu.Unlock()
 
+	if Config.UseGRPC {
+		return sendBatchGRPC(bm)
+	}
 	return sendBatch(bm)
 }
 

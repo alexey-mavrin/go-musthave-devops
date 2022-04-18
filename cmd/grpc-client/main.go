@@ -16,6 +16,7 @@ import (
 type cfg struct {
 	m      common.Metrics
 	server string
+	key    string
 }
 
 func parseCmdLine() (cfg, error) {
@@ -24,6 +25,7 @@ func parseCmdLine() (cfg, error) {
 	counter := flag.Int64("c", 0, "counter value")
 	name := flag.String("n", "", "name")
 	server := flag.String("s", ":3200", "name")
+	key := flag.String("k", "", "auth key")
 	flag.Parse()
 
 	isG := common.IsFlagPassed("g")
@@ -49,6 +51,7 @@ func parseCmdLine() (cfg, error) {
 		c.m.Delta = counter
 	}
 	c.server = *server
+	c.key = *key
 
 	return c, nil
 }
@@ -60,6 +63,11 @@ func main() {
 	}
 
 	p := grpcint.MetricsToPb(config.m)
+
+	if config.key != "" {
+		grpcint.StoreHash(p, config.key)
+	}
+
 	pList := make([](*pb.Metrics), 0)
 	pList = append(pList, p)
 
@@ -78,8 +86,11 @@ func main() {
 		Count:    1,
 		Metrices: pList,
 	}
-	resp, _ := mc.UpdateMetrices(context.Background(), &req)
-	if resp.Error != "" {
+	resp, err := mc.UpdateMetrices(context.Background(), &req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if resp != nil && resp.Error != "" {
 		log.Fatal(resp.Error)
 	}
 }
