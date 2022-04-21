@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net"
 	"os"
 	"time"
 
@@ -9,14 +10,15 @@ import (
 )
 
 type envVarConfig struct {
-	Address       *string        `env:"ADDRESS"`
-	StoreInterval *time.Duration `env:"STORE_INTERVAL"`
-	StoreFile     *string        `env:"STORE_FILE"`
-	ConfigFile    *string        `env:"CONFIG"`
-	Restore       *bool          `env:"RESTORE"`
-	Key           *string        `env:"KEY"`
-	CryptoKey     *string        `env:"CRYPTO_KEY"`
-	DatabaseDSN   *string        `env:"DATABASE_DSN"`
+	Address          *string        `env:"ADDRESS"`
+	StoreInterval    *time.Duration `env:"STORE_INTERVAL"`
+	StoreFile        *string        `env:"STORE_FILE"`
+	ConfigFile       *string        `env:"CONFIG"`
+	Restore          *bool          `env:"RESTORE"`
+	Key              *string        `env:"KEY"`
+	CryptoKey        *string        `env:"CRYPTO_KEY"`
+	DatabaseDSN      *string        `env:"DATABASE_DSN"`
+	TrustedSubnetStr *string        `env:"TRUSTED_SUBNET"`
 }
 
 // ProcessEnvVars scans environment variables and store them in temporal struct
@@ -53,5 +55,15 @@ func (b *Builder) MergeEnvVars() *Builder {
 	if b.envVars.Restore != nil {
 		b.partial.Restore = *b.envVars.Restore
 	}
+
+	if b.envVars.TrustedSubnetStr != nil {
+		_, subnet, err := net.ParseCIDR(*b.envVars.TrustedSubnetStr)
+		if err != nil {
+			b.err = err
+			return b
+		}
+		b.partial.TrustedSubnet = subnet
+	}
+
 	return b
 }

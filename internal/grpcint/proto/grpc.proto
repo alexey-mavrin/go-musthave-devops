@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+option go_package = "github.com/alexey-mavrin/go-musthave-devops/internal/grpcint";
+
+package grpcint;
+
+message Metrics {
+        string id = 1;
+        enum MType {
+		COUNTER = 0;
+		GAUGE = 1;
+	}
+	MType mtype = 2;
+        int64 delta = 3;
+        double value = 4;
+        string hash = 5;
+}
+
+message UpdateMetricesRequest {
+	int32 count = 1;
+	repeated Metrics metrices = 2;
+}
+
+message UpdateMetricesResponse {
+	string error = 1;
+}
+
+service Metrices {
+	rpc UpdateMetrices(UpdateMetricesRequest) returns (UpdateMetricesResponse);
+}

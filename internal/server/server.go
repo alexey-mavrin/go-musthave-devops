@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,9 +20,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"google.golang.org/grpc"
 
 	"github.com/alexey-mavrin/go-musthave-devops/internal/common"
 	"github.com/alexey-mavrin/go-musthave-devops/internal/crypt"
+
+	pb "github.com/alexey-mavrin/go-musthave-devops/internal/grpcint/proto"
 )
 
 type statType int
@@ -33,6 +37,7 @@ type ConfigType struct {
 	Key           string
 	CryptoKey     string
 	DatabaseDSN   string
+	TrustedSubnet *net.IPNet
 	StoreInterval time.Duration
 	Restore       bool
 }
@@ -121,6 +126,21 @@ func StartServer() error {
 	go func() {
 		err := http.ListenAndServe(Config.Address, r)
 		c <- err
+	}()
+
+	go func() {
+		listen, err := net.Listen("tcp", ":3200")
+		if err != nil {
+			c <- err
+		}
+		s := grpc.NewServer()
+		pb.RegisterMetricesServer(s, &MetricesServer{})
+		log.Print("Serving gRPC...")
+		err = s.Serve(listen)
+		if err != nil {
+			c <- err
+		}
+
 	}()
 
 	signalChannel := make(chan os.Signal, 2)
@@ -526,6 +546,7 @@ func Router() chi.Router {
 	r := chi.NewRouter()
 	r.Use(middleware.Compress(5))
 	r.Use(DecryptBody)
+	r.Use(CheckIP)
 	r.Get("/", DumpHandler)
 	r.Get("/ping", DBPing)
 	r.Get("/value/{typ}/{name}", MetricHandler)
